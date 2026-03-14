@@ -15,11 +15,17 @@ import type { NPCConfig, DialogueLine } from "./NPC.ts";
 import { splashManager } from "../splash/SplashManager.ts";
 import { createDialogueSplash } from "../splash/screens/DialogueSplash.ts";
 import type { DialogueNode } from "../splash/screens/DialogueSplash.ts";
+import { createGuideNpcSplash } from "../splash/screens/GuideNpcSplash.ts";
+import { createMarketNpcSplash } from "../splash/screens/MarketNpcSplash.ts";
+import { createQuestsNpcSplash } from "../splash/screens/QuestsNpcSplash.ts";
+import { getConvexClient } from "../lib/convexClient.ts";
+import { api } from "../../convex/_generated/api";
 
 const MOVE_SPEED = 120; // pixels per second
 const SPRINT_MULTIPLIER = 1.5; // hold Shift to move faster
 const ANIM_SPEED = 0.12; // frames per tick (PixiJS AnimatedSprite)
 const NPC_INTERACT_RADIUS = 48; // pixels
+const CHARACTER_COLLISION_RADIUS = 18; // keep bodies from ghosting through each other
 // ---------------------------------------------------------------------------
 // Remote player interpolation
 // ---------------------------------------------------------------------------
@@ -49,6 +55,11 @@ interface RemoteSnapshot {
 const COL_HALF_W = 5;  // slightly narrower to reduce snagging on tight corners
 const COL_TOP = -10;   // keep collision focused on the player's feet
 const COL_BOT = 0;     // bottom of collision box (at feet)
+
+type CharacterCollider = {
+  x: number;
+  y: number;
+};
 
 /** Maps our Direction to the villager sprite sheet row animations */
 const DIR_ANIM: Record<Direction, string> = {
@@ -540,8 +551,12 @@ export class EntityLayer {
     this.playerContainer.x = this.playerX;
     this.playerContainer.y = this.playerY;
 
-    // Camera follows player
-    this.game.camera.follow(this.playerX, this.playerY);
+    // Camera follows the player during play, but build mode should allow free panning.
+    if (this.game.mode === "build") {
+      this.game.camera.stopFollowing();
+    } else {
+      this.game.camera.follow(this.playerX, this.playerY);
+    }
 
     // Interpolate remote players from their snapshot buffers.
     // We render at (now - INTERP_DELAY_MS) so we always have two snapshots
@@ -688,6 +703,8 @@ export class EntityLayer {
       }
     }
 
+    this.resolveCharacterOverlap();
+
     // Track intended velocity (px/s) for presence broadcasts.
     // We send the INPUT-derived direction × speed, NOT the collision-adjusted
     // displacement.  The old approach produced wildly noisy velocity when the
@@ -702,8 +719,11 @@ export class EntityLayer {
    * of the player's collision box (around the feet).
    */
   private isBlocked(px: number, py: number): boolean {
+    return this.isMapBlocked(px, py) || this.isCharacterBlocked(px, py);
+  }
+
+  private isMapBlocked(px: number, py: number): boolean {
     const mr = this.game.mapRenderer;
-    // Check four corners of the collision rect
     const left = px - COL_HALF_W;
     const right = px + COL_HALF_W;
     const top = py + COL_TOP;
@@ -720,6 +740,86 @@ export class EntityLayer {
       mr.isCollision(bl.tileX, bl.tileY) ||
       mr.isCollision(br.tileX, br.tileY)
     );
+  }
+
+  private getCharacterColliders(): CharacterCollider[] {
+    const colliders: CharacterCollider[] = [];
+
+    for (const npc of this.npcs) {
+      colliders.push({ x: npc.x, y: npc.y });
+    }
+
+    for (const [, remote] of this.remotePlayers) {
+      colliders.push({ x: remote.renderX, y: remote.renderY });
+    }
+
+    return colliders;
+  }
+
+  private isCharacterBlocked(px: number, py: number): boolean {
+    const radiusSq = CHARACTER_COLLISION_RADIUS * CHARACTER_COLLISION_RADIUS;
+    const currentX = this.playerX;
+    const currentY = this.playerY;
+
+    for (const collider of this.getCharacterColliders()) {
+      const nextDx = collider.x - px;
+      const nextDy = collider.y - py;
+      const nextDistSq = nextDx * nextDx + nextDy * nextDy;
+      if (nextDistSq >= radiusSq) continue;
+
+      const currentDx = collider.x - currentX;
+      const currentDy = collider.y - currentY;
+      const currentDistSq = currentDx * currentDx + currentDy * currentDy;
+
+      // If we're already overlapping a character, allow movement that
+      // increases separation so the player can slide out instead of getting stuck.
+      if (currentDistSq < radiusSq && nextDistSq > currentDistSq) continue;
+
+      return true;
+    }
+
+    return false;
+  }
+
+  private resolveCharacterOverlap() {
+    const colliders = this.getCharacterColliders();
+    const minDistance = CHARACTER_COLLISION_RADIUS + 1;
+
+    for (const collider of colliders) {
+      let dx = this.playerX - collider.x;
+      let dy = this.playerY - collider.y;
+      let dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist >= minDistance) continue;
+
+      if (dist < 0.001) {
+        dx = 1;
+        dy = 0;
+        dist = 1;
+      }
+
+      const push = minDistance - dist;
+      const pushX = (dx / dist) * push;
+      const pushY = (dy / dist) * push;
+
+      const nextX = this.playerX + pushX;
+      const nextY = this.playerY + pushY;
+
+      if (!this.isMapBlocked(nextX, nextY)) {
+        this.playerX = nextX;
+        this.playerY = nextY;
+        continue;
+      }
+
+      if (!this.isMapBlocked(nextX, this.playerY)) {
+        this.playerX = nextX;
+        continue;
+      }
+
+      if (!this.isMapBlocked(this.playerX, nextY)) {
+        this.playerY = nextY;
+      }
+    }
   }
 
   getCollisionDebugInfo(px = this.playerX, py = this.playerY) {
@@ -744,11 +844,7 @@ export class EntityLayer {
         bl: { ...bl, blocked: mr.isCollision(bl.tileX, bl.tileY) },
         br: { ...br, blocked: mr.isCollision(br.tileX, br.tileY) },
       },
-      boxBlocked:
-        mr.isCollision(tl.tileX, tl.tileY) ||
-        mr.isCollision(tr.tileX, tr.tileY) ||
-        mr.isCollision(bl.tileX, bl.tileY) ||
-        mr.isCollision(br.tileX, br.tileY),
+      boxBlocked: this.isMapBlocked(px, py),
     };
   }
 
@@ -776,11 +872,11 @@ export class EntityLayer {
 
     // Guests are read-only, but dialogue is safe and should still work.
     if (nearest && (input.wasJustPressed("e") || input.wasJustPressed("E"))) {
-      this.startDialogue(nearest);
+      void this.startDialogue(nearest);
     }
   }
 
-  private startDialogue(npc: NPC) {
+  private async startDialogue(npc: NPC) {
     this.inDialogue = true;
 
     // Play greeting / interact sound
@@ -790,6 +886,70 @@ export class EntityLayer {
 
     // NPC faces the player
     npc.faceToward(this.playerX, this.playerY);
+
+    if (npc.name === "guide.btc") {
+      void this.appendWorldEvent("guide-surface-opened", npc, {
+        summary: `${this.profileLabel()} opened the guide desk briefing with ${npc.name}.`,
+      });
+      splashManager.push({
+        id: `guide-btc-${npc.id}`,
+        create: (props) =>
+          createGuideNpcSplash({
+            ...props,
+            npcName: npc.name,
+          }),
+        transparent: true,
+        pausesGame: true,
+        onClose: () => {
+          this.inDialogue = false;
+        },
+      });
+      return;
+    }
+
+    if (npc.name === "market.btc") {
+      void this.appendWorldEvent("market-surface-opened", npc, {
+        summary: `${this.profileLabel()} opened the Tenero-backed market surface with ${npc.name}.`,
+      });
+      splashManager.push({
+        id: `market-btc-${npc.id}`,
+        create: (props) =>
+          createMarketNpcSplash({
+            ...props,
+            npcName: npc.name,
+          }),
+        transparent: true,
+        pausesGame: true,
+        onClose: () => {
+          this.inDialogue = false;
+        },
+      });
+      return;
+    }
+
+    if (npc.name === "quests.btc") {
+      void this.appendWorldEvent("opportunity-surface-opened", npc, {
+        summary: `${this.profileLabel()} opened the Zero Authority opportunity surface with ${npc.name}.`,
+      });
+      splashManager.push({
+        id: `quests-btc-${npc.id}`,
+        create: (props) =>
+          createQuestsNpcSplash({
+            ...props,
+            npcName: npc.name,
+          }),
+        transparent: true,
+        pausesGame: true,
+        onClose: () => {
+          this.inDialogue = false;
+        },
+      });
+      return;
+    }
+
+    void this.appendWorldEvent("npc-interacted", npc, {
+      summary: `${this.profileLabel()} opened ${npc.name}.`,
+    });
 
     // Convert NPC dialogue to DialogueNode format
     const nodes: DialogueNode[] = npc.dialogue.map((line) => ({
@@ -811,13 +971,90 @@ export class EntityLayer {
           nodes,
           startNodeId: nodes[0]?.id,
           npcName: npc.name,
+          onChoice: (nodeId, responseIndex) => {
+            const node = nodes.find((entry) => entry.id === nodeId);
+            const response = node?.responses?.[responseIndex];
+            if (!response) return;
+            void this.appendWorldEvent("dialogue-choice", npc, {
+              summary: `${this.profileLabel()} chose "${response.text}" while speaking with ${npc.name}.`,
+              detailsJson: JSON.stringify({
+                nodeId,
+                responseIndex,
+                responseText: response.text,
+              }),
+            });
+          },
         }),
       transparent: true,
-      pausesGame: false, // NPCs keep wandering
+      // Keep the current speaker anchored during conversation. Without pausing
+      // the game loop, server-driven NPCs continue moving while the splash is open.
+      pausesGame: true,
       onClose: () => {
         this.inDialogue = false;
       },
     });
+  }
+
+  private profileLabel(): string {
+    return this.game.profile?.name || "Player";
+  }
+
+  private async appendWorldEvent(
+    eventType: string,
+    npc: NPC,
+    {
+      summary,
+      detailsJson,
+    }: {
+      summary: string;
+      detailsJson?: string;
+    },
+  ) {
+    try {
+      const convex = getConvexClient();
+      await convex.mutation(api.worldState.appendEvent, {
+        mapName: this.game.currentMapName,
+        eventType,
+        actorId: this.profileLabel(),
+        targetId: npc.name,
+        objectKey: this.semanticObjectKeyForNpc(npc.name),
+        zoneKey: this.semanticZoneKeyForNpc(npc.name),
+        summary,
+        detailsJson,
+      });
+    } catch (error) {
+      console.warn("Failed to append world event", error);
+    }
+  }
+
+  private semanticObjectKeyForNpc(npcName: string): string | undefined {
+    switch (npcName) {
+      case "guide.btc":
+        return "guide-post";
+      case "Toma":
+        return "merchant-post";
+      case "market.btc":
+        return "market-post";
+      case "quests.btc":
+        return "quest-post";
+      default:
+        return undefined;
+    }
+  }
+
+  private semanticZoneKeyForNpc(npcName: string): string | undefined {
+    switch (npcName) {
+      case "guide.btc":
+        return "guide-desk";
+      case "Toma":
+        return "merchant-corner";
+      case "market.btc":
+        return "market-station";
+      case "quests.btc":
+        return "quest-board";
+      default:
+        return undefined;
+    }
   }
 
   // ---------------------------------------------------------------------------

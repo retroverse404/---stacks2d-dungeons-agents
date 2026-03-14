@@ -1,18 +1,21 @@
 /**
- * Chat panel – collapsible message list and input, wired to Convex.
+ * World feed panel – collapsible event log backed by Convex world events.
  */
 import { getConvexClient } from "../lib/convexClient.ts";
 import { api } from "../../convex/_generated/api";
 import type { ProfileData } from "../engine/types.ts";
-import type { Id } from "../../convex/_generated/dataModel";
+import { IconChat } from "../lib/icons.ts";
 import "./ChatPanel.css";
 
-interface ChatMessage {
+interface WorldEvent {
   _id: string;
-  senderName: string;
-  profileId?: string;
-  text: string;
-  type: "chat" | "npc" | "system";
+  eventType: string;
+  actorId?: string;
+  targetId?: string;
+  objectKey?: string;
+  zoneKey?: string;
+  summary: string;
+  detailsJson?: string;
   timestamp: number;
 }
 
@@ -21,28 +24,27 @@ export class ChatPanel {
   private isOpen = false;
   private toggleBtn: HTMLButtonElement;
   private panel: HTMLElement;
-  private input: HTMLInputElement;
   private messagesEl: HTMLElement;
   private emptyEl: HTMLElement;
 
   private profile: ProfileData | null = null;
   private mapName: string | null = null;
   private unsub: (() => void) | null = null;
-  private messages: ChatMessage[] = [];
+  private events: WorldEvent[] = [];
   private unreadCount = 0;
   private badgeEl: HTMLElement;
   private joinedAt = Date.now();
   private didHydrate = false;
-  private seenMessageIds = new Set<string>();
+  private seenEventIds = new Set<string>();
 
   constructor() {
     this.el = document.createElement("div");
 
-    // Toggle button (shown when closed)
     this.toggleBtn = document.createElement("button");
     this.toggleBtn.className = "chat-toggle";
-    this.toggleBtn.title = "Open Chat";
-    this.toggleBtn.textContent = "\uD83D\uDCAC"; // 💬
+    this.toggleBtn.title = "Open World Feed";
+    this.toggleBtn.setAttribute("aria-label", "Open world feed");
+    this.toggleBtn.innerHTML = IconChat;
 
     this.badgeEl = document.createElement("span");
     this.badgeEl.className = "chat-badge";
@@ -52,116 +54,89 @@ export class ChatPanel {
     this.toggleBtn.addEventListener("click", () => this.open());
     this.el.appendChild(this.toggleBtn);
 
-    // Panel (shown when open)
     this.panel = document.createElement("div");
     this.panel.className = "chat-panel";
     this.panel.style.display = "none";
 
-    // Header
     const header = document.createElement("div");
     header.className = "chat-header";
+
+    const headerCopy = document.createElement("div");
+    headerCopy.className = "chat-header-copy";
+
     const headerLabel = document.createElement("span");
-    headerLabel.textContent = "Chat";
+    headerLabel.className = "chat-header-title";
+    headerLabel.textContent = "World Feed";
+
+    const headerSub = document.createElement("span");
+    headerSub.className = "chat-header-subtitle";
+    headerSub.textContent = "Recent world events and agent activity";
+
+    headerCopy.append(headerLabel, headerSub);
+
     const closeBtn = document.createElement("button");
     closeBtn.className = "chat-close";
-    closeBtn.textContent = "\u00D7"; // ×
+    closeBtn.textContent = "\u00D7";
     closeBtn.addEventListener("click", () => this.close());
-    header.append(headerLabel, closeBtn);
+    header.append(headerCopy, closeBtn);
     this.panel.appendChild(header);
 
-    // Messages
     this.messagesEl = document.createElement("div");
     this.messagesEl.className = "chat-messages";
     this.emptyEl = document.createElement("p");
     this.emptyEl.className = "chat-empty";
-    this.emptyEl.textContent = "No messages yet. Say hello!";
+    this.emptyEl.textContent = "No world events yet.";
     this.messagesEl.appendChild(this.emptyEl);
     this.panel.appendChild(this.messagesEl);
-
-    // Input row
-    const form = document.createElement("form");
-    form.className = "chat-input-row";
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      this.sendMessage();
-    });
-
-    this.input = document.createElement("input");
-    this.input.className = "chat-input";
-    this.input.placeholder = "Type a message...";
-    // Prevent game input while typing; Escape closes chat
-    this.input.addEventListener("keydown", (e) => {
-      e.stopPropagation();
-      if (e.key === "Escape") {
-        this.close();
-        this.input.blur();
-      }
-    });
-
-    const sendBtn = document.createElement("button");
-    sendBtn.type = "submit";
-    sendBtn.className = "chat-send";
-    sendBtn.textContent = "Send";
-
-    form.append(this.input, sendBtn);
-    this.panel.appendChild(form);
 
     this.el.appendChild(this.panel);
   }
 
-  // ---------------------------------------------------------------------------
-  // Wire to game
-  // ---------------------------------------------------------------------------
-
-  /** Called by GameShell after the game initializes */
   setContext(profile: ProfileData, mapName: string) {
     const isSameProfile = this.profile?._id === profile._id;
+    const isSameMap = this.mapName === mapName;
     this.profile = profile;
     this.mapName = mapName;
-    // World chat is global per world (not map-scoped).
-    // Avoid resetting unread state on map changes for the same profile.
-    if (isSameProfile && this.unsub) return;
+
+    if (isSameProfile && isSameMap && this.unsub) return;
 
     this.joinedAt = Date.now();
     this.didHydrate = false;
-    this.seenMessageIds.clear();
+    this.seenEventIds.clear();
     this.unreadCount = 0;
     this.updateBadge();
     this.subscribe();
   }
 
   private subscribe() {
-    // Unsubscribe from previous
     this.unsub?.();
-
     const convex = getConvexClient();
     this.unsub = convex.onUpdate(
-      api.chat.listRecent,
-      { mapName: undefined, limit: 50 },
-      (msgs) => {
-        const next = msgs as unknown as ChatMessage[];
+      api.worldState.listEvents,
+      { mapName: this.mapName ?? undefined, limit: 40 },
+      (rows) => {
+        const next = [...(rows as unknown as WorldEvent[])].reverse();
 
-        // Initial hydration should never count as "new messages".
         if (!this.didHydrate) {
-          this.messages = next;
-          this.renderMessages();
-          for (const m of next) this.seenMessageIds.add(String(m._id));
+          this.events = next;
+          this.renderEvents();
+          for (const event of next) this.seenEventIds.add(String(event._id));
           this.didHydrate = true;
           return;
         }
 
         let newUnread = 0;
-        for (const m of next) {
-          const id = String(m._id);
-          const isNewForClient = !this.seenMessageIds.has(id);
-          if (isNewForClient && m.timestamp > this.joinedAt && !this.isOpen) {
+        for (const event of next) {
+          const id = String(event._id);
+          const isNewForClient = !this.seenEventIds.has(id);
+          if (isNewForClient && event.timestamp > this.joinedAt && !this.isOpen) {
             newUnread += 1;
           }
         }
 
-        this.messages = next;
-        this.renderMessages();
-        for (const m of next) this.seenMessageIds.add(String(m._id));
+        this.events = next;
+        this.renderEvents();
+        for (const event of next) this.seenEventIds.add(String(event._id));
 
         if (newUnread > 0) {
           this.unreadCount += newUnread;
@@ -171,99 +146,69 @@ export class ChatPanel {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Send
-  // ---------------------------------------------------------------------------
-
-  private async sendMessage() {
-    const text = this.input.value.trim();
-    if (!text || !this.profile) return;
-
-    this.input.value = "";
-
-    try {
-      const convex = getConvexClient();
-      await convex.mutation(api.chat.send, {
-        // World-level chat channel (shared across maps in this world)
-        mapName: undefined,
-        profileId: this.profile._id as Id<"profiles">,
-        senderName: this.profile.name,
-        text,
-        type: "chat",
-      });
-    } catch (err) {
-      console.warn("Failed to send message:", err);
-      // Show error inline
-      this.addLocalMessage("system", "Failed to send message", "System");
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
-  private renderMessages() {
+  private renderEvents() {
     this.messagesEl.innerHTML = "";
 
-    if (this.messages.length === 0) {
+    if (this.events.length === 0) {
       this.messagesEl.appendChild(this.emptyEl);
       return;
     }
 
     let lastDateKey: string | null = null;
-    for (const msg of this.messages) {
-      const currentDateKey = this.dateKey(msg.timestamp);
+    for (const event of this.events) {
+      const currentDateKey = this.dateKey(event.timestamp);
       if (currentDateKey !== lastDateKey) {
         const divider = document.createElement("div");
         divider.className = "chat-date-divider";
-        divider.textContent = this.formatDateDivider(msg.timestamp);
+        divider.textContent = this.formatDateDivider(event.timestamp);
         this.messagesEl.appendChild(divider);
         lastDateKey = currentDateKey;
       }
 
       const row = document.createElement("div");
-      row.className = `chat-msg chat-msg--${msg.type}`;
+      row.className = "chat-msg chat-msg--event";
 
-      const isMe =
-        this.profile && msg.profileId === this.profile._id;
+      const meta = document.createElement("div");
+      meta.className = "chat-msg-meta";
 
-      if (msg.type === "system") {
-        row.classList.add("chat-msg--system");
-        row.textContent = msg.text;
-      } else {
-        const nameEl = document.createElement("span");
-        nameEl.className = "chat-msg-name";
-        nameEl.textContent = isMe ? "You" : msg.senderName;
-        if (isMe) nameEl.classList.add("chat-msg-name--me");
+      const typeEl = document.createElement("span");
+      typeEl.className = "chat-msg-type";
+      typeEl.textContent = this.formatEventType(event.eventType);
 
-        const textEl = document.createElement("span");
-        textEl.className = "chat-msg-text";
-        textEl.textContent = msg.text;
+      const scopeEl = document.createElement("span");
+      scopeEl.className = "chat-msg-scope";
+      scopeEl.textContent = this.formatScope(event);
 
-        const timeEl = document.createElement("span");
-        timeEl.className = "chat-msg-time";
-        timeEl.textContent = this.formatTime(msg.timestamp);
+      const timeEl = document.createElement("span");
+      timeEl.className = "chat-msg-time";
+      timeEl.textContent = this.formatTime(event.timestamp);
 
-        row.append(nameEl, textEl, timeEl);
-      }
+      meta.append(typeEl, scopeEl, timeEl);
 
+      const textEl = document.createElement("div");
+      textEl.className = "chat-msg-text";
+      textEl.textContent = event.summary;
+
+      row.append(meta, textEl);
       this.messagesEl.appendChild(row);
     }
 
-    // Scroll to bottom
     this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
   }
 
-  /** Add a local-only message (not sent to Convex) */
-  private addLocalMessage(type: "system" | "chat", text: string, sender: string) {
-    this.messages.push({
-      _id: `local-${Date.now()}`,
-      senderName: sender,
-      text,
-      type,
-      timestamp: Date.now(),
-    });
-    this.renderMessages();
+  private formatEventType(eventType: string): string {
+    return eventType
+      .split(/[-_]/g)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+
+  private formatScope(event: WorldEvent): string {
+    const parts: string[] = [];
+    if (event.zoneKey) parts.push(event.zoneKey);
+    if (event.objectKey) parts.push(event.objectKey);
+    return parts.join(" · ") || (this.mapName ?? "world");
   }
 
   private formatTime(ts: number): string {
@@ -290,21 +235,15 @@ export class ChatPanel {
     return d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
   }
 
-  // ---------------------------------------------------------------------------
-  // Open / close / badge
-  // ---------------------------------------------------------------------------
-
   private open() {
     this.isOpen = true;
     this.toggleBtn.style.display = "none";
     this.panel.style.display = "";
     this.unreadCount = 0;
     this.updateBadge();
-    // Scroll to bottom
     requestAnimationFrame(() => {
       this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
     });
-    this.input.focus();
   }
 
   private close() {
@@ -322,7 +261,6 @@ export class ChatPanel {
     }
   }
 
-  /** Show/hide the entire chat (for mode switching) */
   toggle(visible: boolean) {
     this.el.style.display = visible ? "" : "none";
   }

@@ -37,6 +37,33 @@ flowchart LR
   E["External Integrations<br/>AIBTC, Zero Authority, x402 on Stacks"]
 ```
 
+## Current Truth
+
+Live now:
+- TinyRealms world runtime
+- local and cloud-ready Convex backend patterns
+- Braintrust-backed AI path
+- Zero Authority backend ingestion and cache
+- Tenero-backed live market ticker in the HUD
+- dedicated in-world surfaces for:
+  - `guide.btc`
+  - `market.btc`
+  - `quests.btc`
+- World Feed driven by typed `worldEvents`
+
+Scaffolded now:
+- `guide.btc` premium content path
+- x402 offer metadata
+- separate `services/x402-api` boundary for premium endpoints
+- agent-state storage
+- AIBTC-compatible agent registry and planned account binding
+
+Planned next:
+- ranked and fresher ecosystem snapshots
+- purposeful agent behaviors tied to roles and zones
+- real x402 payment execution
+- real AIBTC-compatible agent runtime and account flows
+
 ## Folder Mapping
 
 ```mermaid
@@ -65,11 +92,173 @@ flowchart TD
 flowchart LR
   G[stacks2d / TinyRealms] --> X[AIBTC Adapter]
   G --> Z[Zero Authority Adapter]
-  G --> P[x402 Adapter]
+  G --> T[Tenero Adapter]
+  G --> P[x402 Service Boundary]
   X --> AX[AIBTC services]
   Z --> ZX[Zero Authority API]
-  P --> PX[x402 API / sponsor relay]
+  T --> TX[Tenero API]
+  P --> PX[services/x402-api]
 ```
+
+## Sequential Implementation Order
+
+This is the intended build order. Each layer depends on the previous one.
+
+```mermaid
+flowchart TD
+  A[Phase 1<br/>Playable world baseline] --> B[Phase 2<br/>World semantics]
+  B --> C[Phase 3<br/>Ecosystem data adapters]
+  C --> D[Phase 4<br/>Purposeful agents]
+  D --> E[Phase 5<br/>Premium content and x402]
+  E --> F[Phase 6<br/>Trading agents and onchain execution]
+
+  A["Playable world baseline<br/>maps, movement, scenes, UI, save states"]
+  B["World semantics<br/>zones, semantic objects, roles, values, events"]
+  C["Ecosystem data adapters<br/>Zero Authority live, Tenero next"]
+  D["Purposeful agents<br/>guide, market, quests, posts, constraints"]
+  E["Premium content and x402<br/>offers, paywalls, service endpoints"]
+  F["Trading agents and onchain execution<br/>AIBTC accounts, STX, sBTC, USDCx"]
+```
+
+Why this order matters:
+- it protects the creative layer from payment and wallet complexity
+- it prevents frontend code from becoming an API integration dump
+- it keeps public claims aligned with verified functionality
+
+## Multi-Agent Execution Model
+
+The long-term agentic model is hierarchical, not a single giant NPC brain.
+
+```mermaid
+flowchart TD
+  U[User or owner] --> P[Parent agent]
+  P <--> B[Basket strategy]
+  O[Offchain logic<br/>Zero Authority, Tenero, LLM signals] --> B
+  B --> S1[Guide strategy]
+  B --> S2[Market strategy]
+  B --> S3[Quest strategy]
+  S1 --> N1[World node or service node]
+  S2 --> N2[Protocol or service node]
+  S3 --> N3[World node or service node]
+```
+
+This allows:
+- one user or owner-facing agent session
+- orchestration across multiple worker strategies
+- clear separation between planning and execution
+- future protocol-specific trading or yield agents without coupling them to the renderer
+
+## World Semantics Model
+
+To support purposeful agents and many future worlds, the simulation needs a semantic layer.
+
+```mermaid
+flowchart LR
+  M[Map] --> Z[Zones]
+  M --> O[Object instances]
+  M --> N[NPC instances]
+  Z --> A[Allowed roles and behaviors]
+  O --> V[Value and interaction state]
+  N --> R[Role, post, capability, current state]
+  R --> E[Events]
+  V --> E
+```
+
+Examples:
+- a `guide` role belongs near a `guide-desk` zone
+- a `market` role belongs near a `price-board` or `swap-terminal`
+- a `quest` role belongs near a `board` or `rumor desk`
+
+This is what closes the gap between:
+- what a player visually sees in a room
+- what the system understands about the room
+
+## Spatial Intelligence Stack
+
+The project should treat spatial intelligence as a stack, not a single AI feature.
+
+```mermaid
+flowchart TD
+  G[Geometry] --> S[Semantics]
+  S --> A[Affordances]
+  A --> C[Agent cognition]
+  C --> X[Execution and economy]
+
+  G["Geometry<br/>tiles, blockers, paths, portals, occupancy"]
+  S["Semantics<br/>zones, object meaning, value, roles, tags"]
+  A["Affordances<br/>what can be used, bought, opened, queried, traded"]
+  C["Agent cognition<br/>perception, memory, role policy, planning"]
+  X["Execution and economy<br/>events, offers, x402, STX, sBTC, USDCx"]
+```
+
+This architecture matters because:
+- more LLM output alone will not create a believable simulation
+- agents need structured knowledge of places, objects, and value
+- deterministic movement and pathing should remain separate from high-level reasoning
+
+Practical interpretation:
+- geometry answers where things are
+- semantics answers what things are
+- affordances answer what can be done
+- cognition answers what should happen next
+- execution carries out the chosen action
+
+## Why This Is Needed
+
+The current world already contains rich visual scenes, but many visible objects still exist only as art, not as system-readable entities.
+
+Examples:
+- books
+- coffee
+- swords
+- knives
+- media surfaces
+- terminals
+
+To support a true agent sandbox, these need to become:
+- semantic objects
+- value surfaces
+- interaction points
+- optional offer or premium nodes
+
+## Economy and Settlement Model
+
+The economy is hybrid by design.
+
+```mermaid
+flowchart LR
+  D[Reference pricing layer] --> Q[Quote and conversion layer]
+  Q --> W[World offers and objects]
+  W --> X[x402 or wallet action]
+  X --> S[Stacks settlement or proof]
+
+  D["Reference pricing layer<br/>USD, SATS, stable references"]
+  Q["Quote and conversion layer<br/>SATS, USDCx, soft credits"]
+  W["World offers and objects<br/>coffee, access, skins, reports, terminals"]
+  X["x402 or wallet action<br/>premium content, swaps, purchases"]
+  S["Stacks settlement or proof<br/>STX, sBTC, USDCx"]
+```
+
+Design rules:
+- fast-changing world state stays offchain in Convex
+- sensitive payment, ownership, and settlement paths move onchain only when needed
+- do not claim a hard peg for in-world currency unless it is actually redeemable and enforced
+
+## Judge-Facing Summary
+
+The strongest accurate description today is:
+
+- a playable 2D Stacks-facing world
+- with real backend ecosystem ingestion from Zero Authority and Tenero
+- with real in-world surfaces for guide, market, and opportunity discovery
+- with a real AI guide path
+- with modular scaffolding for premium content, x402, and future AIBTC-style agents
+
+The strongest next milestone is:
+
+1. make the x402 service boundary executable on testnet
+2. add one narrow Clarity proof contract
+3. continue moving NPC behavior from static roles to semantic actions
 
 ## Practical Rule
 

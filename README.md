@@ -28,6 +28,15 @@ The goal is to ship a strong game foundation now while cleanly preparing for:
 - creator economy mechanics
 - ecosystem-driven identity, reputation, and opportunity ingestion
 
+Internally, one of the clearest design framings is:
+
+> Dungeons and Agents
+
+Meaning:
+- a sandbox for agents
+- a world of roles, objects, value, and events
+- a simulation surface that can later settle value through Stacks rails
+
 ## Architecture Snapshot
 
 ```mermaid
@@ -36,7 +45,7 @@ flowchart LR
   B --> C[AI Layer]
   B --> D[Persistence Layer]
   C --> D
-  E[External Integrations] --> D
+E[External Integrations] --> D
 
   A["Experience Layer<br/>maps, art, characters, dialogue UI"]
   B["Game Core<br/>movement, collisions, quests, items, NPC runtime"]
@@ -55,6 +64,43 @@ flowchart LR
   P --> PX[x402 API / sponsor relay]
 ```
 
+## Sequential Build Path
+
+The project is being built in a strict order to avoid technical debt and fake claims.
+
+```mermaid
+flowchart TD
+  A[1. Playable world baseline] --> B[2. Semantic world model]
+  B --> C[3. Ecosystem data adapters]
+  C --> D[4. Purposeful agent behaviors]
+  D --> E[5. Premium content and x402]
+  E --> F[6. Trading agents and onchain execution]
+
+  A["Playable world baseline<br/>maps, movement, scenes, UI, save state"]
+  B["Semantic world model<br/>zones, objects, roles, values, events"]
+  C["Ecosystem data adapters<br/>Zero Authority live, Tenero next"]
+  D["Purposeful agent behaviors<br/>guide, market, quests, planners"]
+  E["Premium content and x402<br/>offers, payment gates, service endpoints"]
+  F["Trading agents and onchain execution<br/>AIBTC-style accounts, STX, sBTC, USDCx"]
+```
+
+This order is intentional:
+- do not put payment logic into rendering and movement
+- do not call third-party APIs directly from the frontend
+- do not claim onchain execution before payment or wallet paths are verified
+
+## Live, Scaffolded, Planned
+
+```mermaid
+flowchart LR
+  L[Live now] --> S[Scaffolded now]
+  S --> P[Planned next]
+
+  L["Live now<br/>TinyRealms runtime<br/>Convex backend<br/>Braintrust AI path<br/>Zero Authority ingestion<br/>Tenero live ticker<br/>guide / market / quests surfaces"]
+  S["Scaffolded now<br/>guide.btc premium offer UI<br/>agent state tables<br/>AIBTC-compatible registry<br/>services/x402-api boundary"]
+  P["Planned next<br/>real x402 execution<br/>Clarity proof contract<br/>purposeful agents<br/>AIBTC account execution"]
+```
+
 ## Features
 
 - **Shared 2D world** — multiplayer presence, map state, chat, and world data
@@ -64,6 +110,21 @@ flowchart LR
 - **AI narrative path** — Braintrust-backed dialogue and narrative generation
 - **Economy primitives** — items, loot, shops, and in-world wallet records
 - **Customizable foundation** — designed to support custom levels, custom characters, and future modular integrations
+
+## Implementation Snapshot
+
+Verified live in the current build:
+- live Tenero ticker in the header
+- Zero Authority opportunity cache used in-world
+- dedicated surfaces for `guide.btc`, `market.btc`, and `quests.btc`
+- `World Feed` driven by typed world events
+- semantic world kernel and AIBTC-compatible registry in Convex
+
+Scaffolded but not yet verified live:
+- `services/x402-api` for premium payment-required endpoints
+- guide premium metadata and endpoint contract
+- future Clarity proof contract
+- future AIBTC account execution
 
 ## Current Status
 
@@ -91,6 +152,25 @@ What is planned next:
 - **Backend**: Convex (database, real-time, file storage, auth)
 - **AI**: Braintrust AI Proxy
 - **Future Stacks direction**: AIBTC patterns, x402 on Stacks, and modular external adapters
+
+## Service Boundaries
+
+The project now includes a dedicated x402 service scaffold:
+
+```text
+services/
+└── x402-api/        Separate payment-required HTTP surface for premium endpoints
+```
+
+Current truth:
+- the service scaffold exists in the repo
+- the world-side offer metadata exists in Convex
+- the in-world premium UI is real
+- actual x402 payment execution is not verified until the service is installed, configured, and run
+
+See also:
+- [docs/Stacks2D-Architecture.md](./docs/Stacks2D-Architecture.md)
+- [docs/Current-State-2026-03-14.md](./docs/Current-State-2026-03-14.md)
 
 ## Getting Started
 
@@ -178,6 +258,83 @@ This separation is intentional so the worldbuilding and asset pipeline can evolv
 
 See [docs/Stacks2D-Architecture.md](docs/Stacks2D-Architecture.md) for diagrams and module boundaries.
 
+### Agent Framework Direction
+
+The long-term agent architecture is layered rather than monolithic.
+
+```mermaid
+flowchart TD
+  U[User or agent owner] --> P[Parent agent]
+  P <--> B[Basket strategy]
+  O[Offchain logic<br/>Zero Authority, Tenero, LLM signals] --> B
+  B --> W1[Guide strategy]
+  B --> W2[Market strategy]
+  B --> W3[Quest strategy]
+  W1 --> N1[World node or service node]
+  W2 --> N2[World node or protocol node]
+  W3 --> N3[World node or service node]
+```
+
+In `stacks2d`, that means:
+- the world stays the interface layer
+- strategy agents stay modular
+- protocol and payment execution stay behind explicit nodes
+- offchain signals help orchestrate decisions without taking over the engine
+
+### World Semantics Direction
+
+The world is being upgraded from a painted scene to a semantic simulation.
+
+```mermaid
+flowchart LR
+  M[Map] --> Z[Zones]
+  M --> O[Object instances]
+  M --> N[NPC instances]
+  Z --> T[Tags and allowed roles]
+  O --> V[Value, interaction, offer state]
+  N --> R[Role, post, current state]
+  R --> E[Events]
+  V --> E
+```
+
+This is the basis for:
+- purposeful NPC movement instead of random drift
+- object-aware agents
+- creator economy loops
+- future multi-world sandbox behavior
+
+### Spatial Intelligence Direction
+
+Spatial intelligence in `stacks2d` is not just “more AI chat”.
+
+It is a layered system:
+
+```mermaid
+flowchart TD
+  G[1. Geometry layer] --> S[2. Semantic layer]
+  S --> A[3. Affordance layer]
+  A --> C[4. Agent cognition layer]
+  C --> E[5. Execution and economy layer]
+
+  G["Geometry layer<br/>tiles, blockers, paths, portals, occupancy"]
+  S["Semantic layer<br/>zones, objects, tags, value, roles"]
+  A["Affordance layer<br/>what can be used, bought, opened, queried, traded"]
+  C["Agent cognition layer<br/>perception, memory, role policy, planning"]
+  E["Execution and economy layer<br/>events, offers, x402, STX, sBTC, USDCx"]
+```
+
+This means:
+- geometry tells the system where things are
+- semantics tells the system what things mean
+- affordances tell agents what they can do
+- cognition helps agents choose meaningful actions
+- execution handles the resulting world or economic action
+
+This is the path from:
+- random NPC wandering
+to
+- a world where agents understand places, objects, and value
+
 ### System Diagram
 
 ```mermaid
@@ -228,6 +385,43 @@ flowchart LR
   Z --> ZX[Zero Authority API]
   P --> PX[x402 API / sponsor relay]
 ```
+
+### Payment and Execution Direction
+
+```mermaid
+flowchart LR
+  H[Human or agent] --> I[World object or NPC]
+  I --> O[Offer metadata in Convex]
+  O --> X[x402 service boundary]
+  X --> C[Stacks settlement path<br/>STX, sBTC, USDCx]
+  X --> R[Premium content or action result]
+  R --> I
+```
+
+Today:
+- offer metadata is real
+- premium UI is real
+- payment execution is not live yet
+
+That distinction is deliberate and should be preserved in public grant language.
+
+### Why Semantics Matter
+
+Without semantics, a room is just background art.
+
+With semantics, the system can know:
+- a coffee mug is a consumable object
+- a swap terminal is a finance object
+- a billboard is a media object
+- a guide desk is a social and information zone
+- a premium booth can expose an x402 offer
+
+That is what makes:
+- ai-town style behavior
+- creator economy objects
+- autonomous agents
+- future trading agents
+possible inside the same world model
 
 ## Modes
 

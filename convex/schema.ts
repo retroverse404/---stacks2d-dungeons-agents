@@ -213,6 +213,91 @@ export default defineSchema({
     .index("by_map_sprite", ["mapName", "spriteDefName"]),
 
   // ---------------------------------------------------------------------------
+  // Semantic world layer
+  // ---------------------------------------------------------------------------
+  worldZones: defineTable({
+    mapName: v.string(),
+    zoneKey: v.string(),               // stable per-map identifier
+    name: v.string(),
+    description: v.optional(v.string()),
+    zoneType: v.string(),              // "guide" | "trade" | "rest" | "entry" | etc.
+    x: v.number(),                     // tile-space rect
+    y: v.number(),
+    width: v.number(),
+    height: v.number(),
+    tags: v.array(v.string()),
+    accessType: v.optional(v.string()), // "public" | "restricted" | "premium"
+    metadataJson: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_map", ["mapName"])
+    .index("by_map_zoneKey", ["mapName", "zoneKey"]),
+
+  semanticObjects: defineTable({
+    mapName: v.string(),
+    objectKey: v.string(),             // stable semantic identifier
+    label: v.string(),
+    objectType: v.string(),            // "npc-post" | "consumable" | "media" | "weapon" | "terminal"
+    sourceType: v.string(),            // "mapObject" | "scene" | "virtual"
+    mapObjectId: v.optional(v.id("mapObjects")),
+    zoneKey: v.optional(v.string()),
+    x: v.optional(v.float64()),        // world-space anchor if known
+    y: v.optional(v.float64()),
+    tags: v.array(v.string()),
+    affordances: v.array(v.string()),  // "inspect" | "buy" | "listen" | "query" | etc.
+    valueClass: v.optional(v.string()), // "utility" | "premium" | "decor" | "trade"
+    linkedAgentId: v.optional(v.string()),
+    stateJson: v.optional(v.string()),
+    metadataJson: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_map", ["mapName"])
+    .index("by_map_objectKey", ["mapName", "objectKey"])
+    .index("by_map_zoneKey", ["mapName", "zoneKey"]),
+
+  npcRoleAssignments: defineTable({
+    agentId: v.string(),               // npc profile / agent id, e.g. guide-btc
+    mapName: v.string(),
+    roleKey: v.string(),               // "guide" | "merchant" | "dj" | etc.
+    displayRole: v.optional(v.string()),
+    behaviorMode: v.optional(v.string()), // "at-post" | "patrol" | "service"
+    homeZoneKey: v.optional(v.string()),
+    postObjectKey: v.optional(v.string()),
+    permissions: v.array(v.string()),
+    metadataJson: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_agentId", ["agentId"])
+    .index("by_map_roleKey", ["mapName", "roleKey"]),
+
+  worldFacts: defineTable({
+    mapName: v.optional(v.string()),
+    factKey: v.string(),
+    factType: v.string(),             // "flag" | "status" | "access" | "economy"
+    valueJson: v.string(),
+    scope: v.optional(v.string()),    // "world" | "agent" | "object" | "player"
+    subjectId: v.optional(v.string()),
+    source: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_factKey", ["factKey"])
+    .index("by_map_factKey", ["mapName", "factKey"]),
+
+  worldEvents: defineTable({
+    mapName: v.optional(v.string()),
+    eventType: v.string(),            // "spawned" | "inspected" | "offered" | "paid" | etc.
+    actorId: v.optional(v.string()),
+    targetId: v.optional(v.string()),
+    objectKey: v.optional(v.string()),
+    zoneKey: v.optional(v.string()),
+    summary: v.string(),
+    detailsJson: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_map_time", ["mapName", "timestamp"])
+    .index("by_actor_time", ["actorId", "timestamp"]),
+
+  // ---------------------------------------------------------------------------
   // Profiles (auth-linked player characters)
   // ---------------------------------------------------------------------------
   profiles: defineTable({
@@ -582,4 +667,184 @@ export default defineSchema({
     })),
     mapId: v.optional(v.id("maps")),
   }).index("by_npc", ["npcId"]),
+
+  // ---------------------------------------------------------------------------
+  // External ecosystem cache
+  // ---------------------------------------------------------------------------
+  externalUsers: defineTable({
+    source: v.string(),                // e.g. "zeroAuthority"
+    externalId: v.string(),
+    stxAddress: v.optional(v.string()),
+    username: v.string(),
+    avatarUrl: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    twitter: v.optional(v.string()),
+    discord: v.optional(v.string()),
+    telegram: v.optional(v.string()),
+    website: v.optional(v.string()),
+    githubUrl: v.optional(v.string()),
+    linkedin: v.optional(v.string()),
+    bnsName: v.optional(v.string()),
+    btcAddress: v.optional(v.string()),
+    isXProfileVerified: v.optional(v.boolean()),
+    isDiscordProfileVerified: v.optional(v.boolean()),
+    isTelegramProfileVerified: v.optional(v.boolean()),
+    profileCompleteness: v.optional(v.number()),
+    activityScore: v.optional(v.number()),
+    servicesJson: v.optional(v.string()),
+    organizationsJson: v.optional(v.string()),
+    rawJson: v.string(),
+    syncedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_source_externalId", ["source", "externalId"])
+    .index("by_source_stxAddress", ["source", "stxAddress"])
+    .index("by_source_username", ["source", "username"]),
+
+  externalOrganizations: defineTable({
+    source: v.string(),
+    externalId: v.string(),
+    name: v.string(),
+    bio: v.optional(v.string()),
+    logo: v.optional(v.string()),
+    website: v.optional(v.string()),
+    twitter: v.optional(v.string()),
+    telegram: v.optional(v.string()),
+    instagram: v.optional(v.string()),
+    network: v.optional(v.string()),
+    adminExternalId: v.optional(v.string()),
+    rawJson: v.string(),
+    syncedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_source_externalId", ["source", "externalId"])
+    .index("by_source_name", ["source", "name"]),
+
+  externalOpportunities: defineTable({
+    source: v.string(),
+    opportunityType: v.union(
+      v.literal("bounty"),
+      v.literal("grant"),
+      v.literal("quest"),
+      v.literal("gig"),
+      v.literal("service"),
+    ),
+    externalId: v.string(),
+    slug: v.optional(v.string()),
+    title: v.string(),
+    summary: v.optional(v.string()),
+    status: v.optional(v.string()),
+    category: v.optional(v.string()),
+    organizationName: v.optional(v.string()),
+    creatorName: v.optional(v.string()),
+    creatorStxAddress: v.optional(v.string()),
+    tokenSymbol: v.optional(v.string()),
+    tokenAddress: v.optional(v.string()),
+    rewardAmount: v.optional(v.string()),
+    rewardUnit: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    startsAt: v.optional(v.number()),
+    endsAt: v.optional(v.number()),
+    isActive: v.optional(v.boolean()),
+    rawJson: v.string(),
+    syncedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_source_externalId", ["source", "externalId"])
+    .index("by_source_type", ["source", "opportunityType"])
+    .index("by_source_type_status", ["source", "opportunityType", "status"]),
+
+  externalSyncLog: defineTable({
+    source: v.string(),
+    syncType: v.string(),              // "users" | "organizations" | "opportunities"
+    status: v.string(),                // "started" | "success" | "error"
+    startedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+    recordsFetched: v.optional(v.number()),
+    recordsUpserted: v.optional(v.number()),
+    error: v.optional(v.string()),
+    metadataJson: v.optional(v.string()),
+  }).index("by_source_startedAt", ["source", "startedAt"]),
+
+  externalMarketSnapshots: defineTable({
+    source: v.string(),                // e.g. "tenero"
+    snapshotType: v.string(),          // e.g. "market-overview" | "wallet-analytics"
+    scope: v.optional(v.string()),     // e.g. "stacks" | wallet address | token id
+    title: v.optional(v.string()),
+    summary: v.optional(v.string()),
+    rawJson: v.string(),
+    syncedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_source_snapshotType", ["source", "snapshotType"])
+    .index("by_source_scope", ["source", "scope"]),
+
+  agentStates: defineTable({
+    agentId: v.string(),               // npc instance name, future agent id, or external agent key
+    agentType: v.string(),             // "npc" | "service" | "external"
+    state: v.string(),                 // "idle" | "teaching" | "guiding" | "offering-premium" | etc.
+    mood: v.optional(v.string()),
+    currentIntent: v.optional(v.string()),
+    memorySummary: v.optional(v.string()),
+    contextJson: v.optional(v.string()),
+    transitionsJson: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_agentId", ["agentId"])
+    .index("by_agentType_state", ["agentType", "state"]),
+
+  agentRegistry: defineTable({
+    agentId: v.string(),               // stable in-world id, e.g. "guide-btc"
+    displayName: v.string(),
+    network: v.string(),               // "testnet" | "mainnet"
+    walletAddress: v.optional(v.string()),
+    bnsName: v.optional(v.string()),
+    agentType: v.string(),             // "npc" | "service" | "external-aibtc"
+    roleKey: v.string(),               // "guide" | "market" | "quests" | etc.
+    permissionTier: v.string(),        // "identity-only" | "service" | "execution"
+    status: v.string(),                // "active" | "planned" | "disabled"
+    homeWorld: v.optional(v.string()),
+    homeMap: v.optional(v.string()),
+    homeZoneKey: v.optional(v.string()),
+    supportedAssets: v.array(v.string()), // "STX" | "sBTC" | "USDCx"
+    metadataJson: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_agentId", ["agentId"])
+    .index("by_network_status", ["network", "status"])
+    .index("by_role_status", ["roleKey", "status"]),
+
+  agentAccountBindings: defineTable({
+    agentId: v.string(),
+    network: v.string(),
+    ownerAddress: v.optional(v.string()),
+    agentAddress: v.optional(v.string()),
+    accountContractId: v.optional(v.string()),
+    allowlistedContracts: v.array(v.string()),
+    canPropose: v.boolean(),
+    canApproveContracts: v.boolean(),
+    canTradeAssets: v.boolean(),
+    status: v.string(),                // "planned" | "bound" | "disabled"
+    metadataJson: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_agentId", ["agentId"])
+    .index("by_network_status", ["network", "status"]),
+
+  premiumContentOffers: defineTable({
+    offerKey: v.string(),              // stable identifier, e.g. "guide-btc-premium-brief"
+    agentId: v.string(),
+    title: v.string(),
+    description: v.string(),
+    provider: v.string(),              // "x402-stacks" | "mock" | "manual"
+    priceAsset: v.string(),            // "STX" | "sBTC"
+    priceAmount: v.string(),           // store as string to avoid precision assumptions
+    network: v.optional(v.string()),   // "testnet" | "mainnet" | "stacks:1"
+    endpointPath: v.optional(v.string()),
+    status: v.string(),                // "draft" | "active" | "disabled"
+    metadataJson: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_offerKey", ["offerKey"])
+    .index("by_agentId_status", ["agentId", "status"]),
 });
