@@ -119,10 +119,12 @@ Verified live in the current build:
 - dedicated surfaces for `guide.btc`, `market.btc`, and `quests.btc`
 - `World Feed` driven by typed world events
 - semantic world kernel and AIBTC-compatible registry in Convex
+- premium offer metadata is real in Convex
+- premium UI is real in the world
 
 Scaffolded but not yet verified live:
 - `services/x402-api` for premium payment-required endpoints
-- guide premium metadata and endpoint contract
+- guide premium payment execution
 - future Clarity proof contract
 - future AIBTC account execution
 
