@@ -170,6 +170,28 @@ What is planned next:
 - x402 on Stacks transaction flows
 - future wallet integrations
 
+## Future GameFi Layer
+
+The longer-term contract roadmap includes a dedicated GameFi/SFT layer informed by the Stacks GameFi tutorial on SFT acquisition, crafting, level-up, and token metadata. Source: [SFTs: Flow and Smart Contracts](https://gamefi-stacks.gitbook.io/stacks-degens-gaming-universe/sfts-flow-and-smart-contracts)
+
+```mermaid
+flowchart TD
+  W[world-lobby.clar<br/>world/session lifecycle] --> O[world-objects.clar<br/>object ownership and binding]
+  O --> S[sft-items.clar<br/>resources, items, passes, upgrades]
+  S --> X[x402 and wallet flows<br/>paid access and settlement]
+```
+
+Planned uses for the SFT layer:
+- room passes and access badges
+- consumable resources
+- craftable and upgradeable items
+- creator/media access items
+- future skins, tools, and world modules
+
+Important truth:
+- this SFT layer is a planned roadmap item
+- it is not implemented in the current build
+
 ## Tech Stack
 
 - **Frontend**: Vite + TypeScript
@@ -196,6 +218,7 @@ Current truth:
 See also:
 - [docs/Stacks2D-Architecture.md](./docs/Stacks2D-Architecture.md)
 - [docs/Current-State-2026-03-14.md](./docs/Current-State-2026-03-14.md)
+- [docs/SFT-GameFi-Context.md](./docs/SFT-GameFi-Context.md)
 
 ## Getting Started
 

@@ -269,6 +269,33 @@ Design rules:
 - sensitive payment, ownership, and settlement paths move onchain only when needed
 - do not claim a hard peg for in-world currency unless it is actually redeemable and enforced
 
+## Future GameFi / SFT Layer
+
+The planned GameFi layer is strongly informed by the Stacks GameFi SFT tutorial covering resource burn/mint flows, acquisition, crafting, level-up, and token URI metadata. Source: [SFTs: Flow and Smart Contracts](https://gamefi-stacks.gitbook.io/stacks-degens-gaming-universe/sfts-flow-and-smart-contracts)
+
+```mermaid
+flowchart LR
+  L[world-lobby.clar] --> O[world-objects.clar]
+  O --> S[sft-items.clar]
+  S --> P[x402 and wallet flows]
+
+  L["world-lobby.clar<br/>room membership, host ownership, flow-state"]
+  O["world-objects.clar<br/>object binding, transfers, metadata anchors"]
+  S["sft-items.clar<br/>resources, passes, crafting, level-up, token URI"]
+  P["x402 and wallet flows<br/>premium access, paid services, settlement"]
+```
+
+This layer would support:
+- world passes and access badges
+- consumable resources
+- craftable items
+- upgradeable tools and modules
+- creator/media access items
+
+Important truth:
+- this SFT/GameFi layer is part of the architecture roadmap
+- it is not yet implemented in the current repo
+
 ## Judge-Facing Summary
 
 The strongest accurate description today is:
