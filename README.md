@@ -128,6 +128,7 @@ Verified locally:
 - a connected Stacks testnet wallet can sign the payment
 - the signed retry settles through the service-local facilitator fallback
 - `guide.btc` returns premium content after successful settlement
+- the premium response is returned as structured JSON that can scale to both human UI rendering and agent consumption
 
 Scaffolded or still not yet verified beyond local development:
 - hosted official facilitator path
@@ -222,6 +223,35 @@ Current truth:
 - the in-world premium UI is real
 - the first local `guide.btc` x402 payment path is verified end-to-end on Stacks testnet
 - hosted/public facilitator behavior is still a separate verification item
+
+## Premium Payload Contract
+
+The x402 premium response is intentionally JSON-first.
+
+Why that matters:
+
+- humans can view it as a styled premium card in-world
+- agents can consume it programmatically without prose parsing
+- apps can treat it as a stable contract between payment, content, and world-state consequences
+
+Current shape:
+
+- payment/proof metadata
+- premium classification
+- delivery timestamp
+
+Current limitation:
+
+- the verified local payload is still closer to a receipt/proof envelope than a fully enriched classified briefing
+
+Next evolution:
+
+- keep the receipt/proof fields
+- add richer structured briefing content sourced from backend integrations
+- let that same JSON contract later scale into:
+  - premium rooms via `world-lobby.clar`
+  - premium terminals and objects via `world-objects.clar`
+  - passes/items via `sft-items.clar`
 
 ## DoraHacks Snapshot
 
