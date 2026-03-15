@@ -19,6 +19,9 @@ This note is a timestamped implementation snapshot for `stacks2d (tinyrealms)`.
 - the AIBTC-compatible registry exists in Convex:
   - `agentRegistry`
   - `agentAccountBindings`
+- the wallet/account role model now exists in Convex:
+  - `walletIdentities`
+  - `signedIntents`
 
 ## Verified By
 
@@ -73,6 +76,7 @@ Also implemented:
 - server-side Hiro API key environment contract for future backend settlement/broadcast work
 - repo-local x402 package portability fix using a vendored tarball instead of a symlinked source dependency
 - service-local facilitator fallback and env loading for deterministic local settlement
+- a JSON-first premium response shape that can act as a receipt/proof envelope for future richer premium payloads
 
 Still not verified:
 - hosted official facilitator path
@@ -86,11 +90,14 @@ The project now has a real Stacks-facing discovery and market slice.
 
 It now **does** have:
 - verified local x402 settlement end-to-end for `guide.btc`
+- explicit backend persistence for player wallets, service wallets, agent wallets, and signed intents
+- a machine-readable premium payload contract suitable for future agent/app consumption
 
 It does **not** yet have:
 - verified hosted/public-facilitator settlement
 - verified onchain proof contract
 - verified AIBTC execution against agent accounts
+- a fully enriched classified premium briefing sourced from live backend context
 
 ## Immediate Next Steps
 
