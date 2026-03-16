@@ -1,6 +1,14 @@
-# stacks2d (tinyrealms)
+# stacks2d (Dungeons & Agents)
 
-Stackshub is a playable Stacks-native agent sandbox built on TinyRealms, where wallet-backed characters, paid actions, and world state can be explored inside a 2D social world.
+> Dungeons and Agents
+
+Meaning:
+- a sandbox for agents
+- a world of roles, objects, value, and events
+- a simulation surface that can later settle value through Stacks rails
+
+
+This is a playable Stacks-native agent sandbox built on TinyRealms, where wallet-backed characters, paid actions, and world state can be explored inside a 2D social world.
 
 This project builds from the original [61cygni/tinyrealms](https://github.com/61cygni/tinyrealms) foundation, which provided a strong starting point for persistent 2D world simulation.
 
@@ -67,14 +75,8 @@ The goal is to ship a strong game foundation now while cleanly preparing for:
 - ecosystem-driven identity, reputation, and opportunity ingestion
 - lightweight gossip through world events
 
-Internally, one of the clearest design framings is:
 
-> Dungeons and Agents
 
-Meaning:
-- a sandbox for agents
-- a world of roles, objects, value, and events
-- a simulation surface that can later settle value through Stacks rails
 
 ## Architecture Snapshot
 
@@ -288,8 +290,6 @@ Current truth:
 
 ## Why x402 and the Contract Both Exist
 
-Judges should read the two layers like this:
-
 - x402 answers: `can this premium action be paid for and unlocked right now?`
 - `premium-access-v2` answers: `can this premium unlock be proven or recorded onchain after payment?`
 
@@ -311,7 +311,7 @@ It keeps the payment rail narrow while giving the world a path to:
 
 It lets the contract owner:
 
-- grant access to a specific resource for a specific principal
+- grant access to a specific resource/media/asset for a specific principal
 - revoke that access
 - check whether a principal has access
 - read the stored grant record
@@ -409,10 +409,6 @@ Next evolution:
   - premium rooms via `world-lobby.clar`
   - premium terminals and objects via `world-objects.clar`
   - passes/items via `sft-items.clar`
-
-## DoraHacks Snapshot
-
-The strongest honest hackathon claim today is:
 
 - playable 2D world shell with multiplayer foundations
 - backend-driven Stacks ecosystem discovery surfaces
