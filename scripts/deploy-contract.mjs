@@ -6,6 +6,9 @@
  * Usage:
  *   STACKS_PRIVATE_KEY=<your-key> node scripts/deploy-contract.mjs
  *
+ * Optional overrides:
+ *   CONTRACT_FILE=world-lobby.clar CONTRACT_NAME=world-lobby node scripts/deploy-contract.mjs
+ *
  * Your private key never leaves this machine.
  * Get your testnet private key from Xverse:
  *   Xverse -> Settings -> Backup wallet -> reveal seed phrase
@@ -28,7 +31,9 @@ try {
   const lines = readFileSync(envFile, "utf8").split("\n");
   for (const line of lines) {
     const [key, ...rest] = line.split("=");
-    if (key && rest.length) process.env[key.trim()] = rest.join("=").trim();
+    if (key && rest.length && !process.env[key.trim()]) {
+      process.env[key.trim()] = rest.join("=").trim();
+    }
   }
 } catch {
   // no .env.deploy — use environment variable directly
@@ -44,8 +49,11 @@ if (!privateKey) {
   process.exit(1);
 }
 
+const contractFile = process.env.CONTRACT_FILE ?? "premium-access.clar";
+const contractName = process.env.CONTRACT_NAME ?? "premium-access-v2";
+
 const contractSource = readFileSync(
-  resolve(__dirname, "../contracts/premium-access.clar"),
+  resolve(__dirname, `../contracts/${contractFile}`),
   "utf8"
 );
 
@@ -57,10 +65,9 @@ const {
 } = await import("@stacks/transactions");
 
 const network = "testnet";
-const contractName = "premium-access";
 const deployerAddress = getAddressFromPrivateKey(privateKey, network);
 
-console.log(`Deploying ${contractName} to ${network}...`);
+console.log(`Deploying ${contractName} from ${contractFile} to ${network}...`);
 
 const tx = await makeContractDeploy({
   contractName,

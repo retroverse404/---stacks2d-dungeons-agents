@@ -5,6 +5,8 @@ This service is the separate x402 payment boundary for `stacks2d`.
 Current scope:
 - one premium endpoint: `/api/premium/guide-btc`
 - one metadata endpoint: `/api/premium/guide-btc/metadata`
+- one premium endpoint: `/api/premium/market-btc/quote`
+- one metadata endpoint: `/api/premium/market-btc/metadata`
 - STX on testnet first
 
 Current truth:
@@ -20,6 +22,9 @@ Copy `.env.example` into your runtime environment and set:
 - `NETWORK`
 - `FACILITATOR_URL`
 - `GUIDE_PREMIUM_PRICE_STX`
+- `MARKET_PREMIUM_PRICE_STX`
+- `MARKET_SERVER_ADDRESS` (optional; falls back to `SERVER_ADDRESS`)
+- `MARKET_NETWORK` (optional; falls back to `NETWORK`)
 - `HIRO_API_KEY` (optional, server-side only)
 - `HIRO_API_BASE_URL` (optional override)
 
@@ -52,6 +57,22 @@ Current response shape:
 Important truth:
 - the current verified payload is still closer to a premium receipt/proof envelope than a fully enriched classified briefing
 - the next step is to keep the JSON contract and enrich the `guide.btc` briefing fields with backend-sourced context
+
+### `GET /api/premium/market-btc/metadata`
+Returns the current paid quote offer contract without requiring payment.
+
+### `GET /api/premium/market-btc/quote`
+x402-protected premium endpoint for live market quote delivery.
+
+Current response shape:
+- structured JSON
+- token pair and amount input
+- expected output amount
+- source agent id and delivery timestamp
+
+Important truth:
+- the verified in-world payment loop for this endpoint is on testnet
+- ALEX trade execution proof remains a separate mainnet AIBTC module proof
 
 ## Why this exists
 

@@ -63,12 +63,14 @@ Scaffolded now:
 
 Verified now:
 - local x402 payment path for `guide.btc`
-- deployed `premium-access-v2` contract on Stacks testnet
+- local x402 paid quote path for `market.btc`
+- deployed `premium-access-v2`, `world-lobby`, and `world-objects` contracts on Stacks testnet
 - working Clarity 4 deploy path from this repo
 
 Planned next:
 - ranked and fresher ecosystem snapshots
 - purposeful agent behaviors tied to roles and zones
+- lightweight gossip via `worldEvents` propagation
 - x402-to-contract grant integration
 - real AIBTC-compatible agent runtime and account flows
 
@@ -107,7 +109,7 @@ flowchart LR
   Z --> ZX[Zero Authority API]
   T --> TX[Tenero API]
   P --> PX[services/x402-api]
-  C --> CX[premium-access-v2]
+  C --> CX[premium-access-v2<br/>world-lobby<br/>world-objects]
 ```
 
 ## Verified Connector Execution
@@ -132,6 +134,37 @@ What is verified:
 - the browser consumes those backend queries instead of calling the external APIs directly
 
 This proves real backend connector execution, not just themed UI.
+
+## Lightweight Gossip Layer
+
+For the hackathon scope, `gossip` should be understood as app-level event propagation, not a separate protocol.
+
+The current foundation already exists:
+- typed `worldEvents`
+- agent and NPC surfaces
+- Convex as the live coordination layer
+
+The intended behavior is:
+- important actions write a world event
+- nearby or role-relevant agents observe a subset of those events
+- dialogue, premium surfaces, and world memory reflect that propagated state
+
+This is especially relevant for:
+- x402 premium unlocks
+- market offers purchased
+- new opportunities surfacing
+- agent status changes
+
+```mermaid
+flowchart LR
+  X[x402 payment or agent action] --> E[worldEvents]
+  E --> G[guide.btc]
+  E --> M[market.btc]
+  E --> Q[quests.btc]
+  E --> W[World Feed]
+```
+
+This gives the world social consequences without requiring every agent to poll all backend state directly.
 
 ## Sequential Implementation Order
 

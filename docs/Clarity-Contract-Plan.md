@@ -30,6 +30,17 @@ The recommended order is:
 
 1. `premium-access-v2`
 2. `world-lobby.clar`
+3. `world-objects.clar`
+
+## Current Testnet Deployments
+
+These contracts are now deployed on Stacks testnet from this repo:
+
+| Contract | Contract ID | Transaction |
+|---|---|---|
+| `premium-access-v2` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.premium-access-v2` | [`0x96afaf46c0e1ed8f86aceb0b0687fa6bdd284f9ea1366cd5437dc25901e969c3`](https://explorer.hiro.so/txid/0x96afaf46c0e1ed8f86aceb0b0687fa6bdd284f9ea1366cd5437dc25901e969c3?chain=testnet) |
+| `world-lobby` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-lobby` | [`0xe411bff9d554b55f12a19c30fa4d278525f8c197f4deac3391cb4362b0e6d84f`](https://explorer.hiro.so/txid/e411bff9d554b55f12a19c30fa4d278525f8c197f4deac3391cb4362b0e6d84f?chain=testnet) |
+| `world-objects` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects` | [`0x37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f`](https://explorer.hiro.so/txid/37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f?chain=testnet) |
 
 ## Why `premium-access-v2` Comes First
 
@@ -109,6 +120,26 @@ What it models well:
 - flow-state transitions
 - open / active / closed state
 
+For the current TinyRealms sandbox, the smallest honest mapping is:
+
+- `entry`
+  - public arrival space
+- `guide-desk`
+  - public information zone
+- `merchant-corner`
+  - public trade zone
+- `market-station`
+  - public analytics zone now, premium or gated later
+- `quest-board`
+  - public opportunity zone now, gated event board later
+
+So `world-lobby.clar` should stay focused on:
+
+- room or zone keys
+- access mode
+- open / closed state
+- room membership
+
 ## Recommended Mapping
 
 - `world-lobby.clar`
@@ -123,6 +154,21 @@ What it models well:
   - tied to:
     - `guide.btc`
     - later premium reports, rooms, scenes, or services
+
+- `world-objects.clar`
+  - one thin object access registry
+  - tied to current semantic objects such as:
+    - `guide-post`
+    - `merchant-post`
+    - `market-post`
+    - `quest-post`
+    - `price-board`
+    - `opportunity-board`
+  - later extends cleanly to:
+    - music terminals
+    - vinyl or cassette displays
+    - premium media consoles
+    - event props and collectible surfaces
 
 - future `sft-items.clar`
   - resources, items, crafting, upgrades, passes
@@ -144,4 +190,5 @@ It is **not** a substitute for:
 2. Keep it scoped as post-payment proof/state, not x402 settlement itself
 3. Use resource-specific access keys such as `guide-btc-premium-brief`
 4. After that, adapt the `btchub-lobby.clar` state-machine style into `world-lobby.clar`
-5. Later, add an SFT item/resource layer for GameFi progression and passes
+5. Then add `world-objects.clar` as the object access and activation layer
+6. Later, add an SFT item/resource layer for GameFi progression and passes
