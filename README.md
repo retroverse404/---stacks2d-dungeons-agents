@@ -8,14 +8,14 @@ Meaning:
 - a simulation surface that can later settle value through Stacks rails
 
 
-This is a playable Stacks-native agent sandbox built on TinyRealms, where wallet-backed characters, paid actions, and world state can be explored inside a 2D social world.
+This is a playable Stacks-native agent sandbox built,where wallet-backed actors, paid actions(x402),and world state can be explored inside a multi polar social simulation.
 
-This project builds from the original [61cygni/tinyrealms](https://github.com/61cygni/tinyrealms) foundation, which provided a strong starting point for persistent 2D world simulation.
+This project builds from 2d game engine [61cygni/tinyrealms](https://github.com/61cygni/tinyrealms) foundation, which provided a strong starting point for persistent 2D world simulation.
 
 ## At A Glance
 
-- **What it is**: a playable Stacks-native agent sandbox built on TinyRealms.
-- **World shell**: TinyRealms provides the 2D map, NPC, object, and exploration layer.
+- **What it is**: a playable Stacks-native agent sandbox.
+- **World shell**: 2D map, NPC, object, and exploration layer.
 - **State layer**: Convex stores agents, offers, world facts, events, zones, and semantic objects.
 - **AI layer**: Braintrust-backed prompts drive in-world dialogue and agent-facing responses.
 - **Payment rail**: x402 gates paid actions like premium briefings and live market quotes.
