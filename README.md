@@ -1,8 +1,6 @@
 # stacks2d (tinyrealms)
 
-The Stacks ecosystem, made playable.
-
-Work in progress: a 2D social world and agent sandbox for creator economy and Stacks/Bitcoin-native interactions.
+Stackshub is a playable Stacks-native agent sandbox built on TinyRealms, where wallet-backed characters, paid actions, and world state can be explored inside a 2D social world.
 
 This project builds from the original [61cygni/tinyrealms](https://github.com/61cygni/tinyrealms) foundation, which provided a strong starting point for persistent 2D world simulation.
 
