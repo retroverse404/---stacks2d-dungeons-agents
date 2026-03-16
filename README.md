@@ -1,8 +1,6 @@
 # stacks2d (tinyrealms)
 
-The Stacks ecosystem, made playable.
-
-Work in progress: a 2D social world and agent sandbox for creator economy and Stacks/Bitcoin-native interactions.
+Stackshub is a playable Stacks-native agent sandbox built on TinyRealms, where wallet-backed characters, paid actions, and world state can be explored inside a 2D social world.
 
 This project builds from the original [61cygni/tinyrealms](https://github.com/61cygni/tinyrealms) foundation, which provided a strong starting point for persistent 2D world simulation.
 
@@ -31,12 +29,15 @@ The priority is:
 ## Verified Links
 
 - `premium-access-v2` contract:
+  - Records paid premium-access proof on Stacks testnet.
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.premium-access-v2`
   - https://explorer.hiro.so/txid/0x96afaf46c0e1ed8f86aceb0b0687fa6bdd284f9ea1366cd5437dc25901e969c3?chain=testnet
 - `world-lobby` contract:
+  - Records room creation, open or closed state, and room access on Stacks testnet.
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-lobby`
   - https://explorer.hiro.so/txid/e411bff9d554b55f12a19c30fa4d278525f8c197f4deac3391cb4362b0e6d84f?chain=testnet
 - `world-objects` contract:
+  - Records object registration, active state, and object access on Stacks testnet.
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects`
   - https://explorer.hiro.so/txid/37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f?chain=testnet
 
