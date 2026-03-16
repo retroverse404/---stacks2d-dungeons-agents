@@ -8,18 +8,47 @@ This project builds from the original [61cygni/tinyrealms](https://github.com/61
 
 ## At A Glance
 
-- **What it is**: a 2D social world and customizable game foundation
-- **What works now**: world rendering, map editing, multiplayer foundations, NPC runtime, Braintrust-backed AI actions
-- **What it is becoming**: a sandbox for AI agents, creator economy, and Stacks/Bitcoin-native interactions
-- **Why Stacks**: the architecture is being shaped for future AIBTC patterns, x402 on Stacks transaction flows, and external ecosystem adapters without coupling those concerns into the core game runtime
+- **What it is**: a playable Stacks-native agent sandbox built on TinyRealms.
+- **World shell**: TinyRealms provides the 2D map, NPC, object, and exploration layer.
+- **State layer**: Convex stores agents, offers, world facts, events, zones, and semantic objects.
+- **AI layer**: Braintrust-backed prompts drive in-world dialogue and agent-facing responses.
+- **Payment rail**: x402 gates paid actions like premium briefings and live market quotes.
+- **Contract layer**: Clarity contracts record premium access, room access, and object access on Stacks testnet.
+- **Agent direction**: AIBTC is used as the external agent-wallet pattern, not yet as full in-world autonomous runtime.
 
-## Current Deployed Artifacts
+## Current Sprint
 
-- local x402 premium payment proof for `guide.btc`
-- deployed Clarity 4 contract proof layer:
+This repo is currently being prepared for the DoraHacks Stacks Build Battle submission.
+
+For the remaining sprint, the priority is not feature sprawl.
+The priority is:
+
+- one highly legible flagship loop
+- clear Stacks alignment
+- visible payment/proof flow
+- a demo that judges can understand quickly
+
+## Verified Links
+
+- `premium-access-v2` contract:
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.premium-access-v2`
-- deployment tx:
-  - `96afaf46c0e1ed8f86aceb0b0687fa6bdd284f9ea1366cd5437dc25901e969c3`
+  - https://explorer.hiro.so/txid/0x96afaf46c0e1ed8f86aceb0b0687fa6bdd284f9ea1366cd5437dc25901e969c3?chain=testnet
+- `world-lobby` contract:
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-lobby`
+  - https://explorer.hiro.so/txid/e411bff9d554b55f12a19c30fa4d278525f8c197f4deac3391cb4362b0e6d84f?chain=testnet
+- `world-objects` contract:
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects`
+  - https://explorer.hiro.so/txid/37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f?chain=testnet
+
+## What Is Verified
+
+- `guide.btc`: a testnet x402 premium payment loop returns paid content after wallet-signed settlement.
+- `market.btc`: a testnet x402 paid quote loop returns a live quote payload after wallet-signed settlement.
+- `premium-access-v2`: a deployed Clarity 4 contract records paid premium-access proof on testnet.
+- `world-lobby`: a deployed Clarity contract records room creation, room access, and room entry state on testnet.
+- `world-objects`: a deployed Clarity contract records object registration, object access, and object activity state on testnet.
+- `Zero Authority`: backend-ingested ecosystem data is cached in Convex and rendered in-world.
+- `Tenero`: backend-ingested market data is cached in Convex and rendered in the HUD and `market.btc`.
 
 ## Why This Matters
 
@@ -35,6 +64,7 @@ The goal is to ship a strong game foundation now while cleanly preparing for:
 - x402 on Stacks paid service flows
 - creator economy mechanics
 - ecosystem-driven identity, reputation, and opportunity ingestion
+- lightweight gossip through world events
 
 Internally, one of the clearest design framings is:
 
@@ -71,7 +101,7 @@ flowchart LR
   X --> AX[AIBTC services]
   Z --> ZX[Zero Authority API]
   P --> PX[x402 API / sponsor relay]
-  C --> CX[premium-access-v2<br/>testnet]
+  C --> CX[premium-access-v2<br/>world-lobby<br/>world-objects<br/>testnet]
 ```
 
 ## Sequential Build Path
@@ -106,9 +136,9 @@ flowchart LR
   L[Live now] --> S[Scaffolded now]
   S --> P[Planned next]
 
-  L["Live now<br/>TinyRealms runtime<br/>Convex backend<br/>Braintrust AI path<br/>Zero Authority ingestion<br/>Tenero live ticker<br/>guide / market / quests surfaces"]
-  S["Scaffolded now<br/>guide.btc premium offer UI<br/>agent state tables<br/>AIBTC-compatible registry<br/>services/x402-api boundary"]
-  P["Planned next<br/>real x402 execution<br/>Clarity proof contract<br/>purposeful agents<br/>AIBTC account execution"]
+  L["Live now<br/>TinyRealms runtime<br/>Convex backend<br/>Braintrust AI path<br/>Zero Authority ingestion<br/>Tenero live ticker<br/>guide / market / quests surfaces<br/>3 deployed testnet contracts"]
+  S["Scaffolded now<br/>agent state tables<br/>AIBTC-compatible registry<br/>services/x402-api boundary<br/>worldFacts blackboard pattern"]
+  P["Planned next<br/>x402 to contract writes<br/>purposeful agents<br/>AIBTC account execution<br/>future SFT item layer"]
 ```
 
 ## Features
@@ -138,6 +168,7 @@ Verified locally:
 - a connected Stacks testnet wallet can sign the payment
 - the signed retry settles through the service-local facilitator fallback
 - `guide.btc` returns premium content after successful settlement
+- `market.btc` now has a verified testnet paid quote loop returning a real quote payload after x402 payment
 - the premium response is returned as structured JSON that can scale to both human UI rendering and agent consumption
 
 Verified on Stacks testnet:
@@ -146,6 +177,12 @@ Verified on Stacks testnet:
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.premium-access-v2`
 - deployment tx:
   - `96afaf46c0e1ed8f86aceb0b0687fa6bdd284f9ea1366cd5437dc25901e969c3`
+- `world-lobby` is deployed on testnet
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-lobby`
+  - `e411bff9d554b55f12a19c30fa4d278525f8c197f4deac3391cb4362b0e6d84f`
+- `world-objects` is deployed on testnet
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects`
+  - `37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f`
 
 Not yet fully integrated:
 - public hosted payment infrastructure outside the local fallback path
@@ -175,6 +212,20 @@ Verified connector paths in the current build:
 Verified by runtime/backend queries:
 - `integrations/zeroAuthority:guideSnapshot`
 - `integrations/tenero:tickerRows`
+
+## Lightweight Gossip Through World Events
+
+The current world already has a typed `World Feed`.
+
+The intended next step is to use that same event system as a lightweight gossip layer:
+- a premium unlock creates a world event
+- an agent action creates a world event
+- a new opportunity or market shift creates a world event
+- nearby or role-relevant world surfaces can react to those events
+
+This is the hackathon-scoped version of social propagation:
+- not a full distributed gossip protocol
+- but a real world-memory mechanism that makes payments, offers, and agent actions visible inside the simulation
 
 ## Current Status
 
