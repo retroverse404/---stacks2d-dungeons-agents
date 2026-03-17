@@ -28,15 +28,33 @@ Submission pack:
 - [submission/README.md](/home/rv404/RV404-Lab/PRODUCTIVITY/Obsidian/Test-1a/Apps/tinyrealms/submission/README.md)
 - [submission/submission.json](/home/rv404/RV404-Lab/PRODUCTIVITY/Obsidian/Test-1a/Apps/tinyrealms/submission/submission.json)
 
-## Current Focus
+## Flagship Loop
 
-The current priority is not feature sprawl.
-The current priority is:
+The current live product focus is:
 
-- one highly legible flagship loop
-- clear Stacks alignment
+- one world-native premium interaction loop
+- clear STX and Stacks settlement
 - visible payment and proof flow
-- stable world-triggered interactions
+- stable object-triggered and agent-triggered interactions
+
+## Live Contract Stack
+
+- `premium-access-v2`
+  - premium access proof on Stacks testnet
+- `world-lobby`
+  - room and access state on Stacks testnet
+- `world-objects`
+  - object registration, activity, and access state on Stacks testnet
+- `floppy-disk-nft`
+  - SIP-009 media artifact
+- `cassette-nft`
+  - SIP-009 media artifact
+- `wax-cylinder-nft`
+  - SIP-009 flagship media artifact
+- `qtc-token`
+  - SIP-010 fungible token for the future in-world economy layer
+- `sft-items`
+  - semi-fungible item layer for repeatable resources and access items
 
 ## Verified Links
 
