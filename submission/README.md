@@ -21,6 +21,7 @@ Five AI agents with real testnet wallets live inside a 2D world. Players pay the
 - x402 premium endpoints for `guide.btc`, `market.btc`, and `Mel`
 - `premium-access-v2`, `world-lobby`, and `world-objects` deployed on testnet
 - `floppy-disk-nft`, `cassette-nft`, and `wax-cylinder-nft` deployed on testnet
+- `qtc-token` and `sft-items` deployed on testnet as the future fungible and semi-fungible economy layer
 
 ## Public Claim
 

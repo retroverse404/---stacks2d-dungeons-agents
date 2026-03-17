@@ -39,6 +39,7 @@ Core claim:
 | Payment rail | x402 gates premium actions — STX is the live demo currency |
 | Contract layer | Clarity contracts record premium access, room access, and object access on Stacks testnet |
 | Asset layer | SIP-009 media artifact contracts for wax cylinder, cassette, and floppy disk |
+| Economy layer | `qtc-token` and `sft-items` are deployed on testnet as the future fungible and semi-fungible economy layer |
 | Agent direction | AIBTC-pattern wallets — 5 real funded testnet identities |
 
 ---
