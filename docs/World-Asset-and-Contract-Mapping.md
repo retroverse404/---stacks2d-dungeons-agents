@@ -56,6 +56,18 @@ TinyRealms already has a usable offchain item system.
 
 This means the contracts do **not** need to replace the game database.
 
+## Asset Category Split
+
+Use this split to avoid confusion:
+
+| Category | Best fit | Current status |
+|---|---|---|
+| world props / terminals | `world-objects.clar` + semantic objects | live contract, partial app use |
+| normal inventory items | Convex `itemDefs` / `worldItems` / profile inventory | live |
+| repeatable onchain item classes | `sft-items.clar` | deployed, not integrated |
+| unique relics / media artifacts | SIP-009 contracts | deployed |
+| fungible currency | STX now, `qtc-token.clar` later | STX live, QTC deployed but not integrated |
+
 ## Contract Mapping
 
 ### `premium-access-v2`
@@ -121,7 +133,7 @@ Suggested semantic types later:
 
 ### Future item layer
 
-Use `sft-items.clar` later for:
+Use `sft-items.clar` for:
 
 - tickets
 - passes
@@ -137,3 +149,10 @@ Keep the contracts thin.
 - Convex remains the rich world database
 - Clarity proves access, registry, and ownership state
 - future assets only need wiring once the contract spine is in place
+
+## Current GameFi Truth
+
+- `qtc-token.clar` is deployed on testnet as the future fungible in-game currency layer
+- `sft-items.clar` is deployed on testnet as the future repeatable item/resource layer
+- the current demo still uses `STX` as the live currency
+- no live QTC mint/spend loop or seeded SFT gameplay economy should be claimed yet

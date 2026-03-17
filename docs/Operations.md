@@ -29,11 +29,25 @@ Both values must match.
 - Run typecheck + lint:
   - `npm run typecheck`
   - `npm run lint`
+- Run the demo doctor before recording or sharing a build:
+  - `npm run demo:doctor`
 - Audit map sizes:
   - `npm run audit:maps`
 - Backup world state before risky changes:
   - `npm run backup:world`
 - If touching schema, follow migration phases in `docs/EvolvingTheWorld.md`.
+
+### Demo doctor expectations
+
+`npm run demo:doctor` checks:
+
+- active frontend reachability
+- active Convex target from `.env.local`
+- active x402 health on `:4020`
+- whether the x402 signer key is configured
+- whether the x402 service can log back into Convex
+
+It does not prove the premium flow by itself, but it catches most bad-env and dead-service failures before demo capture.
 
 ---
 
@@ -208,3 +222,4 @@ offline for extended periods, run `npm run db:compact` periodically.
 - `docs/Auth.md` — auth and permissions model
 - `docs/5.3Codex.md` — architecture critique + remediation tracking
 - `docs/deploymet.md` — deployment workflow (Netlify + Convex)
+- `submission/demo-checklist.md` — judge/demo evidence checklist

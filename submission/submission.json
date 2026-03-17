@@ -1,0 +1,148 @@
+{
+  "project_name": "Dungeons & Agents",
+  "repo_name": "stacks2d-dungeons-agents",
+  "repo_url": "https://github.com/retroverse404/---stacks2d-dungeons-agents",
+  "tagline": "A playable Stacks-native agent world where five wallet-backed AI agents earn in STX through world-triggered premium actions.",
+  "one_liner": "Five AI agents with real testnet wallets live inside a 2D world. Players pay them in STX through x402, premium access is recorded on Stacks, and the World Feed reflects the result.",
+  "status": "active",
+  "last_verified": "2026-03-17",
+  "demo_video_url": "",
+  "live_demo_url": "",
+  "primary_track": "Stacks + x402",
+  "chain_focus": "Stacks",
+  "stack": [
+    "Stacks",
+    "Clarity",
+    "x402",
+    "Convex",
+    "Braintrust",
+    "PixiJS"
+  ],
+  "world_model": {
+    "architecture_pillars": [
+      "apps",
+      "identity",
+      "worlds",
+      "agents",
+      "ecosystem"
+    ],
+    "world_pillars": [
+      "Value",
+      "Wealth",
+      "Beauty",
+      "Power",
+      "Knowledge"
+    ]
+  },
+  "implementation_lineage": {
+    "aibtc_reference": "Agents/AIBTC/Bitflow Tutorial 1",
+    "market_agent_internal_name": "market-btc-m1",
+    "public_name_rule": "Use market.btc in product surfaces; keep Bitflow/AIBTC as technical lineage only."
+  },
+  "agent_wallets": [
+    {
+      "agent_id": "guide-btc",
+      "display_name": "guide.btc",
+      "network": "testnet",
+      "stx_address": "ST3P76BS18H1QZN8HCQKYRHRAT9GC2XTJ0GZ0HWXE"
+    },
+    {
+      "agent_id": "toma-merchant",
+      "display_name": "Toma",
+      "network": "testnet",
+      "stx_address": "STXE8MZ5Y35646XT8MEXHJZ3YKWS20CSE31NP92R"
+    },
+    {
+      "agent_id": "market-btc",
+      "display_name": "market.btc",
+      "network": "testnet",
+      "stx_address": "ST3EGPYCJ8JTC9QETJHM2T47ZCCWNM9VX98ZEPXWT"
+    },
+    {
+      "agent_id": "quests-btc",
+      "display_name": "quests.btc",
+      "network": "testnet",
+      "stx_address": "ST19P5Y1XSYNNYM8JM6QDX95BAP7659742WF0FEQ2"
+    },
+    {
+      "agent_id": "mel-curator",
+      "display_name": "Mel",
+      "network": "testnet",
+      "stx_address": "ST3YJTXH81SR6YPSG59RBJDBV5H2DD164Y1855ZK5"
+    }
+  ],
+  "contracts": [
+    {
+      "name": "premium-access-v2",
+      "contract_id": "ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.premium-access-v2",
+      "txid": "0x96afaf46c0e1ed8f86aceb0b0687fa6bdd284f9ea1366cd5437dc25901e969c3"
+    },
+    {
+      "name": "world-lobby",
+      "contract_id": "ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-lobby",
+      "txid": "0xe411bff9d554b55f12a19c30fa4d278525f8c197f4deac3391cb4362b0e6d84f"
+    },
+    {
+      "name": "world-objects",
+      "contract_id": "ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects",
+      "txid": "0x37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f"
+    },
+    {
+      "name": "floppy-disk-nft",
+      "contract_id": "ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft",
+      "txid": "0xd479d3b00cee6ffb422a5a2008c6df7b40b4dcc7973b06e40a861019d1067ff4"
+    },
+    {
+      "name": "cassette-nft",
+      "contract_id": "ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft",
+      "txid": "0x9f676a6529744b1b207cf2a615739fdb098067664913944b50e5e6c4929f04ac"
+    },
+    {
+      "name": "wax-cylinder-nft",
+      "contract_id": "ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft",
+      "txid": "0x144b4cca0fce72e98ad6bd7619ee2de146bca085f7cf1398ec85421b0c060296"
+    },
+    {
+      "name": "qtc-token",
+      "contract_id": "ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.qtc-token",
+      "txid": "0x2a0ccf9cb5c22fcd16a0d8ff897c5fadf231cd41bf77558d49bd8f7d8ca032de"
+    },
+    {
+      "name": "sft-items",
+      "contract_id": "ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.sft-items",
+      "txid": "0xae0b7cb5b01fbd84acb5db5cf4501d9a49dcc06af4b73a1f664d583ca4952944"
+    }
+  ],
+  "verified_claims": [
+    "Five named agents have funded testnet STX wallet identities.",
+    "World-triggered premium actions are routed through x402.",
+    "premium-access-v2 is deployed on Stacks testnet for access proof.",
+    "Three SIP-009 media artifact contracts are deployed on Stacks testnet.",
+    "The 2D world, semantic zones, and agent runtime exist in the playable client.",
+    "qtc-token and sft-items are deployed on Stacks testnet."
+  ],
+  "not_claimed": [
+    "Live SFT gameplay economy",
+    "Live SIP-010 gameplay currency loop",
+    "Verified agent-to-agent onchain STX transfer cascade",
+    "Artifact mint-on-payment flow already live"
+  ],
+  "pending_evidence": [
+    "Guide premium txid capture",
+    "Market premium txid capture",
+    "Mel premium txid capture",
+    "World Feed screenshot showing premium-access-granted",
+    "Final demo video URL"
+  ],
+  "docs": {
+    "start_here": "docs/00-Start-Here.md",
+    "overview": "docs/Overview.md",
+    "status": "docs/Stacks-Implementation-Status.md",
+    "submission_story": "docs/Dungeons-and-Agents.md"
+  },
+  "judge_note": {
+    "why_this_exists": "A fast Stacks-specific summary for reviewers who do not want to reconstruct the project from the full repo.",
+    "core_submission_claim": "The Stacks ecosystem, made playable: an agentic sandbox for simulated worlds, wallets, and transactions.",
+    "evidence_rule": "Only claim what is deployed, funded, routed, or visibly captured."
+  }
+}

@@ -22,9 +22,30 @@ flowchart LR
 This means the contract is not replacing x402.
 It is extending it with durable world-readable proof.
 
+## Plain-English Cheat Sheet
+
+If the contract layer feels abstract, use this:
+
+- `premium-access-v2`
+  - did this wallet unlock this premium thing?
+
+- `world-lobby`
+  - can this wallet enter this room?
+
+- `world-objects`
+  - can this wallet use this object?
+
+- `SIP-009`
+  - does this wallet own this unique artifact?
+
+- future `SFT`
+  - how many repeatable game items/resources does this wallet have?
+
+For a shorter explanation, use [Contract-Cheat-Sheet.md](/home/rv404/RV404-Lab/PRODUCTIVITY/Obsidian/Test-1a/Apps/tinyrealms/docs/Contract-Cheat-Sheet.md).
+
 ## Current Decision
 
-The project should not lead with a world/lobby contract as the first and only hackathon contract.
+The project should not lead with a world/lobby contract as the first and only contract in the payment-proof layer.
 
 The recommended order is:
 
@@ -48,7 +69,7 @@ This contract maps directly to the current product slice:
 - `guide.btc` premium content
 - x402 payment boundary
 - paid unlock proof
-- judge-visible Stacks transaction relevance
+- direct Stacks transaction relevance
 
 It is the strongest first onchain proof because it ties to:
 - premium content
@@ -157,6 +178,7 @@ So `world-lobby.clar` should stay focused on:
 
 - `world-objects.clar`
   - one thin object access registry
+  - plain English: a door-lock list for important props
   - tied to current semantic objects such as:
     - `guide-post`
     - `merchant-post`
@@ -170,10 +192,35 @@ So `world-lobby.clar` should stay focused on:
     - premium media consoles
     - event props and collectible surfaces
 
+- `floppy-disk-nft.clar`
+  - narrow SIP-009 artifact contract for the floppy item
+  - intended as a low-tier collectible media relic
+  - minimal mint, transfer, owner lookup, and token URI surface
+
+- `cassette-nft.clar`
+  - narrow SIP-009 artifact contract for the cassette item
+  - intended as a mid-tier collectible media relic
+  - minimal mint, transfer, owner lookup, and token URI surface
+
+- `wax-cylinder-nft.clar`
+  - narrow SIP-009 artifact contract for the wax cylinder item
+  - intended as the flagship collectible music artifact
+  - minimal mint, transfer, owner lookup, and token URI surface
+  - richer metadata can be layered later if the artifact loop proves out
+
 - future `sft-items.clar`
   - resources, items, crafting, upgrades, passes
   - aligned with Stacks GameFi SFT patterns
   - best added after world/session and object layers are established
+
+## NFT Transfer Guardrails
+
+For these SIP-009 artifact contracts:
+
+- keep the first pass to mint, owner lookup, token URI, and explicit transfer
+- if player-facing transfers are added, use wallet post-conditions in deny mode
+- if optional NFT movement becomes part of zone entry or equip flows later, adopt the SIP-040 `may-send` pattern once it is live on Stacks
+- if autonomous agents later transfer player-held assets, wrap those flows with explicit asset restrictions rather than broad allowances
 
 ## Important Truth
 
@@ -186,9 +233,11 @@ It is **not** a substitute for:
 
 ## Next Contract Work
 
-1. Wire x402 success to `premium-access-v2`
-2. Keep it scoped as post-payment proof/state, not x402 settlement itself
-3. Use resource-specific access keys such as `guide-btc-premium-brief`
-4. Add app-level reads and writes for `world-lobby.clar` room access
-5. Add app-level reads and writes for `world-objects.clar` object registration and access
-6. Later, add an SFT item/resource layer for GameFi progression and passes
+1. Keep x402 success scoped to `premium-access-v2` as post-payment proof/state, not settlement itself
+2. Verify and capture txids for the current premium surfaces using resource-specific access keys such as `guide-btc-premium-brief`
+3. Add app-level reads and writes for `world-lobby.clar` room access
+4. Add app-level reads and writes for `world-objects.clar` object registration and access
+5. Add the three artifact NFT contracts to the deployment plan:
+   `floppy-disk-nft.clar`, `cassette-nft.clar`, `wax-cylinder-nft.clar`
+6. Mint or claim those artifacts only after the related world loops are stable
+7. Later, add an SFT item/resource layer for GameFi progression and repeatable items

@@ -2,6 +2,25 @@
 
 This note records the intended plumbing direction for wallet-backed or account-backed agents in `stacks2d`.
 
+## Naming Rule
+
+Public-facing names should stay product-clean:
+
+- `guide.btc`
+- `market.btc`
+- `quests.btc`
+- `Mel`
+- `Toma`
+
+Implementation lineage can still be documented separately.
+
+For example:
+
+- public surface: `market.btc`
+- implementation lineage: AIBTC / `market-btc-m1` from the Bitflow tutorial flow
+
+This keeps the product presentation professional while preserving honest ecosystem alignment.
+
 ## Goal
 
 The target is not only a single x402 payment flow.
@@ -42,6 +61,22 @@ Current backend model now distinguishes:
 - agent execution accounts
 - signed intents, including future `SIP-018`-style approvals or policies
 
+## AIBTC Lineage
+
+The current `market.btc` path is important because it comes from a real working AIBTC implementation lineage, not a hypothetical wallet mock.
+
+Canonical internal reference:
+
+- AIBTC lineage: `Agents/AIBTC/Bitflow Tutorial 1`
+- technical agent reference: `market-btc-m1`
+- public in-world identity: `market.btc`
+
+What this proves:
+
+- the wallet-backed market agent pattern was first validated outside the game shell
+- the TinyRealms version is a productized in-world surface, not a tutorial artifact
+- the AIBTC ecosystem alignment is real and should be stated as lineage, not as public branding
+
 ### x402
 
 `x402` stays a narrow paid-service boundary.
@@ -57,7 +92,9 @@ Current coherent contract stack:
 1. `premium-access-v2`
 2. `world-lobby.clar`
 3. `world-objects.clar`
-4. later `sft-items.clar`
+4. deployed SIP-009 media artifacts
+5. deployed `qtc-token.clar` for future fungible economy flows
+6. deployed `sft-items.clar` for future repeatable item/resource flows
 
 ### Chainhooks
 
@@ -91,3 +128,24 @@ The repo now has explicit persistence surfaces for this:
 - `signedIntents`
 
 This keeps multiple wallet roles legible without pretending every actor is just a browser extension session.
+
+## Normalized Fields
+
+The wallet-backed agent layer should not hide canonical identity facts inside `metadataJson`.
+
+The current database contract now treats these as first-class fields where possible:
+
+- `walletProvider`
+- `walletStatus`
+- `testnetAddress`
+- `mainnetAddress`
+- `lineageSource`
+- `lineageRef`
+
+Use `metadataJson` for notes and secondary payloads.
+
+Do not use `metadataJson` as the only source of truth for:
+
+- provider lineage
+- cross-network addresses
+- execution-vs-identity wallet classification

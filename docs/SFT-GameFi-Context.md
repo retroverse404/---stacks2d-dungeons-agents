@@ -42,11 +42,13 @@ SFTs are not the same thing as:
 - world/session state
 - object ownership binding
 - x402 payment-required HTTP access
+- one-off collectible artifact NFTs
 
 Those concerns map better to:
 - `world-lobby.clar`
 - `world-objects.clar`
 - `x402` service boundaries
+- narrow SIP-009 contracts for unique media artifacts such as floppy disk, cassette, and wax cylinder
 
 ## Recommended Contract Stack
 
@@ -58,7 +60,10 @@ The strongest layered contract story is:
 2. `world-objects.clar`
    - object binding and ownership
    - terminals, booths, props, media objects
-3. `sft-items.clar`
+3. `floppy-disk-nft.clar`, `cassette-nft.clar`, `wax-cylinder-nft.clar`
+   - unique collectible media artifacts
+   - narrow SIP-009 ownership layer
+4. `sft-items.clar`
    - items, resources, crafting, upgrades, passes
 
 This is stronger than trying to make the SFT contract carry the whole world by itself.
@@ -84,3 +89,15 @@ They should be described as:
 - a planned GameFi layer
 - strongly aligned with Stacks GameFi patterns
 - future-facing until contract code and wallet flow are actually wired
+
+## Backlog Status
+
+SFTs and GameFi are part of the active backlog, not discarded scope.
+
+Use [GameFi-Backlog.md](/home/rv404/RV404-Lab/PRODUCTIVITY/Obsidian/Test-1a/Apps/tinyrealms/docs/status/GameFi-Backlog.md) as the canonical next-layer reference for:
+
+- repeatable item classes
+- tavern consumables
+- dungeon resources
+- access passes
+- later `QTC`/SIP-010 currency direction

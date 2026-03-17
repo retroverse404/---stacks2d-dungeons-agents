@@ -1,30 +1,42 @@
-# stacks2d (tinyrealms)
+# stacks2d (Dungeons & Agents)
 
-Stackshub is a playable Stacks-native agent sandbox built on TinyRealms, where wallet-backed characters, paid actions, and world state can be explored inside a 2D social world.
+> Dungeons and Agents
 
-This project builds from the original [61cygni/tinyrealms](https://github.com/61cygni/tinyrealms) foundation, which provided a strong starting point for persistent 2D world simulation.
+Meaning
+• sandbox for agents
+• world of roles, objects, value, and events
+• simulation surface that can settle value through Bitcoin / Stacks rails
+
+This is a playable Stacks-native GameFi sandbox where wallet-backed actors, paid actions (x402), and world state interact inside a multi-agent social simulation.
+
+The project builds on the 61cygni/tinyrealms 2D engine, providing a strong foundation for persistent world simulation.
 
 ## At A Glance
 
-- **What it is**: a playable Stacks-native agent sandbox built on TinyRealms.
-- **World shell**: TinyRealms provides the 2D map, NPC, object, and exploration layer.
+- **What it is**: a playable Stacks-native agent sandbox.
+- **World shell**: 2D map, NPC, object, and exploration layer.
 - **State layer**: Convex stores agents, offers, world facts, events, zones, and semantic objects.
 - **AI layer**: Braintrust-backed prompts drive in-world dialogue and agent-facing responses.
 - **Payment rail**: x402 gates paid actions like premium briefings and live market quotes.
-- **Contract layer**: Clarity contracts record premium access, room access, and object access on Stacks testnet.
-- **AIBTC module**: AIBTC provides the external agent-wallet and trading pattern behind the current `market.btc` direction.
+- **Contract layer**: Clarity contracts record premium access, room access, object access, collectible artifacts, and the next economy layer on Stacks testnet.
+- **Agent direction**: AIBTC informs the wallet-backed agent pattern and the `market.btc` implementation lineage.
 
-## Current Sprint
+Start here for the clean reading order:
+- [docs/00-Start-Here.md](/home/rv404/RV404-Lab/PRODUCTIVITY/Obsidian/Test-1a/Apps/tinyrealms/docs/00-Start-Here.md)
 
-This repo is currently being prepared for the DoraHacks Stacks Build Battle submission.
+Submission pack:
+- [submission/README.md](/home/rv404/RV404-Lab/PRODUCTIVITY/Obsidian/Test-1a/Apps/tinyrealms/submission/README.md)
+- [submission/submission.json](/home/rv404/RV404-Lab/PRODUCTIVITY/Obsidian/Test-1a/Apps/tinyrealms/submission/submission.json)
 
-For the remaining sprint, the priority is not feature sprawl.
-The priority is:
+## Current Focus
+
+The current priority is not feature sprawl.
+The current priority is:
 
 - one highly legible flagship loop
 - clear Stacks alignment
-- visible payment/proof flow
-- a demo that judges can understand quickly
+- visible payment and proof flow
+- stable world-triggered interactions
 
 ## Verified Links
 
@@ -40,15 +52,37 @@ The priority is:
   - Records object registration, active state, and object access on Stacks testnet.
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects`
   - https://explorer.hiro.so/txid/37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f?chain=testnet
+- `floppy-disk-nft` contract:
+  - SIP-009 media artifact on Stacks testnet.
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft`
+  - https://explorer.hiro.so/txid/0xd479d3b00cee6ffb422a5a2008c6df7b40b4dcc7973b06e40a861019d1067ff4?chain=testnet
+- `cassette-nft` contract:
+  - SIP-009 media artifact on Stacks testnet.
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft`
+  - https://explorer.hiro.so/txid/0x9f676a6529744b1b207cf2a615739fdb098067664913944b50e5e6c4929f04ac?chain=testnet
+- `wax-cylinder-nft` contract:
+  - SIP-009 flagship artifact on Stacks testnet.
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft`
+  - https://explorer.hiro.so/txid/0x144b4cca0fce72e98ad6bd7619ee2de146bca085f7cf1398ec85421b0c060296?chain=testnet
+- `qtc-token` contract:
+  - SIP-010 fungible token deployed on Stacks testnet.
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.qtc-token`
+  - https://explorer.hiro.so/txid/0x2a0ccf9cb5c22fcd16a0d8ff897c5fadf231cd41bf77558d49bd8f7d8ca032de?chain=testnet
+- `sft-items` contract:
+  - custom semi-fungible item layer deployed on Stacks testnet.
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.sft-items`
+  - https://explorer.hiro.so/txid/0xae0b7cb5b01fbd84acb5db5cf4501d9a49dcc06af4b73a1f664d583ca4952944?chain=testnet
 
 ## What Is Verified
 
 - `guide.btc`: a testnet x402 premium payment loop returns paid content after wallet-signed settlement.
 - `market.btc`: a testnet x402 paid quote loop returns a live quote payload after wallet-signed settlement.
-- `AIBTC`: an external agent-wallet module has already produced a real wallet-backed market actor and informs the `market.btc` integration path.
 - `premium-access-v2`: a deployed Clarity 4 contract records paid premium-access proof on testnet.
 - `world-lobby`: a deployed Clarity contract records room creation, room access, and room entry state on testnet.
 - `world-objects`: a deployed Clarity contract records object registration, object access, and object activity state on testnet.
+- `floppy-disk-nft`, `cassette-nft`, `wax-cylinder-nft`: deployed SIP-009 media artifacts on testnet.
+- `qtc-token`: deployed SIP-010 fungible token on testnet, not yet integrated into gameplay.
+- `sft-items`: deployed semi-fungible item contract on testnet, not yet integrated into gameplay.
 - `Zero Authority`: backend-ingested ecosystem data is cached in Convex and rendered in-world.
 - `Tenero`: backend-ingested market data is cached in Convex and rendered in the HUD and `market.btc`.
 
@@ -68,14 +102,8 @@ The goal is to ship a strong game foundation now while cleanly preparing for:
 - ecosystem-driven identity, reputation, and opportunity ingestion
 - lightweight gossip through world events
 
-Internally, one of the clearest design framings is:
 
-> Dungeons and Agents
 
-Meaning:
-- a sandbox for agents
-- a world of roles, objects, value, and events
-- a simulation surface that can later settle value through Stacks rails
 
 ## Architecture Snapshot
 
@@ -103,7 +131,7 @@ flowchart LR
   X --> AX[AIBTC services]
   Z --> ZX[Zero Authority API]
   P --> PX[x402 API / sponsor relay]
-  C --> CX[premium-access-v2<br/>world-lobby<br/>world-objects<br/>testnet]
+  C --> CX[premium-access-v2<br/>world-lobby<br/>world-objects<br/>SIP-009 artifacts<br/>qtc-token<br/>sft-items<br/>testnet]
 ```
 
 ## Sequential Build Path
@@ -138,9 +166,9 @@ flowchart LR
   L[Live now] --> S[Scaffolded now]
   S --> P[Planned next]
 
-  L["Live now<br/>TinyRealms runtime<br/>Convex backend<br/>Braintrust AI path<br/>Zero Authority ingestion<br/>Tenero live ticker<br/>guide / market / quests surfaces<br/>3 deployed testnet contracts"]
-  S["Scaffolded now<br/>agent state tables<br/>AIBTC-compatible registry<br/>services/x402-api boundary<br/>worldFacts blackboard pattern"]
-  P["Planned next<br/>x402 to contract writes<br/>purposeful agents<br/>AIBTC account execution<br/>future SFT item layer"]
+  L["Live now<br/>TinyRealms runtime<br/>Convex backend<br/>Braintrust AI path<br/>Zero Authority ingestion<br/>Tenero live ticker<br/>guide / market / quests surfaces<br/>8 deployed testnet contracts"]
+  S["Scaffolded now<br/>agent state tables<br/>AIBTC-compatible registry<br/>services/x402-api boundary<br/>worldFacts blackboard pattern<br/>deployed but not integrated QTC / SFT economy"]
+  P["Planned next<br/>x402 proof capture in demo<br/>purposeful agents<br/>AIBTC account execution<br/>live gameplay economy wiring"]
 ```
 
 ## Features
@@ -185,11 +213,26 @@ Verified on Stacks testnet:
 - `world-objects` is deployed on testnet
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects`
   - `37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f`
+- `floppy-disk-nft` is deployed on testnet
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft`
+  - `d479d3b00cee6ffb422a5a2008c6df7b40b4dcc7973b06e40a861019d1067ff4`
+- `cassette-nft` is deployed on testnet
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft`
+  - `9f676a6529744b1b207cf2a615739fdb098067664913944b50e5e6c4929f04ac`
+- `wax-cylinder-nft` is deployed on testnet
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft`
+  - `144b4cca0fce72e98ad6bd7619ee2de146bca085f7cf1398ec85421b0c060296`
+- `qtc-token` is deployed on testnet
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.qtc-token`
+  - `2a0ccf9cb5c22fcd16a0d8ff897c5fadf231cd41bf77558d49bd8f7d8ca032de`
+- `sft-items` is deployed on testnet
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.sft-items`
+  - `ae0b7cb5b01fbd84acb5db5cf4501d9a49dcc06af4b73a1f664d583ca4952944`
 
 Not yet fully integrated:
 - public hosted payment infrastructure outside the local fallback path
 - a clean receipt and transaction-proof user experience
-- automatic contract access grants after successful x402 payment
+- live grant-access verification across all premium paths with a configured deployer key
 - live AIBTC-style agent account execution
 
 ## Verified Backend Connector Execution
@@ -225,7 +268,7 @@ The intended next step is to use that same event system as a lightweight gossip 
 - a new opportunity or market shift creates a world event
 - nearby or role-relevant world surfaces can react to those events
 
-This is the hackathon-scoped version of social propagation:
+This is the current application-level version of social propagation:
 - not a full distributed gossip protocol
 - but a real world-memory mechanism that makes payments, offers, and agent actions visible inside the simulation
 
@@ -248,7 +291,7 @@ What is planned next:
 - stronger in-world agent dialogue and worldFacts coordination
 - future wallet integrations
 
-## Future GameFi Layer
+## Deployed GameFi Layer
 
 The longer-term contract roadmap includes a dedicated GameFi/SFT layer informed by the Stacks GameFi tutorial on SFT acquisition, crafting, level-up, and token metadata. Source: [SFTs: Flow and Smart Contracts](https://gamefi-stacks.gitbook.io/stacks-degens-gaming-universe/sfts-flow-and-smart-contracts)
 
@@ -267,8 +310,9 @@ Planned uses for the SFT layer:
 - future skins, tools, and world modules
 
 Important truth:
-- this SFT layer is a planned roadmap item
-- it is not implemented in the current build
+- `qtc-token` and `sft-items` are now deployed on testnet
+- they are not yet wired into a live gameplay loop
+- the demo should still use STX as the active currency until gameplay mint/spend flows are visible
 
 ## Contract Proof Layer
 
@@ -285,11 +329,9 @@ flowchart LR
 Current truth:
 - `premium-access-v2` is deployed on Stacks testnet
 - it is a post-payment proof/state contract, not the x402 settlement mechanism
-- the backend is not yet calling `grant-access` after successful payment
+- the service-side `grant-access` path is now wired, and live tx capture is the remaining verification step
 
 ## Why x402 and the Contract Both Exist
-
-Judges should read the two layers like this:
 
 - x402 answers: `can this premium action be paid for and unlocked right now?`
 - `premium-access-v2` answers: `can this premium unlock be proven or recorded onchain after payment?`
@@ -312,7 +354,7 @@ It keeps the payment rail narrow while giving the world a path to:
 
 It lets the contract owner:
 
-- grant access to a specific resource for a specific principal
+- grant access to a specific resource/media/asset for a specific principal
 - revoke that access
 - check whether a principal has access
 - read the stored grant record
@@ -357,6 +399,7 @@ Near-future use cases:
 - passes, keys, badges, and itemized access through `sft-items.clar`
 - agent-readable access checks for future wallet-bearing agents
 - durable proof beyond session-only frontend or Convex state
+- future fungible economy flows through `qtc-token.clar`
 
 ## Tech Stack
 
@@ -411,35 +454,34 @@ Next evolution:
   - premium terminals and objects via `world-objects.clar`
   - passes/items via `sft-items.clar`
 
-## DoraHacks Snapshot
-
-The strongest honest hackathon claim today is:
-
 - playable 2D world shell with multiplayer foundations
 - backend-driven Stacks ecosystem discovery surfaces
-- purposeful named agents (`guide.btc`, `market.btc`, `quests.btc`)
-- one verified local x402 payment proof through `guide.btc`
-- one deployed Clarity 4 contract proof layer:
-  - `premium-access-v2`
-- AIBTC-aligned agent registry and account-binding scaffolding in Convex
-- a clear contract roadmap:
+- purposeful named agents (`guide.btc`, `market.btc`, `quests.btc`, `Mel`, `Toma`)
+- verified x402 premium payment paths for `guide.btc` and `market.btc`
+- eight deployed testnet contracts:
   - `premium-access-v2`
   - `world-lobby.clar`
   - `world-objects.clar`
-  - later `sft-items.clar`
+  - `floppy-disk-nft.clar`
+  - `cassette-nft.clar`
+  - `wax-cylinder-nft.clar`
+  - `qtc-token.clar`
+  - `sft-items.clar`
+- AIBTC-aligned agent registry and account-binding scaffolding in Convex
 
-Still roadmap, not live:
+Still not live in gameplay:
 
 - broader multi-agent economic execution
-- autonomous trading / basket strategy
+- autonomous trading and coordinator-driven execution
 - broad Chainhooks rollout
-- item/SFT economy
+- QTC mint/spend gameplay loop
+- item/SFT gameplay economy
 - hosted production payment infrastructure
 
 See also:
-- [docs/Stacks2D-Architecture.md](./docs/Stacks2D-Architecture.md)
-- [docs/Current-State-2026-03-14.md](./docs/Current-State-2026-03-14.md)
-- [docs/SFT-GameFi-Context.md](./docs/SFT-GameFi-Context.md)
+- [docs/Overview.md](./docs/Overview.md)
+- [docs/Backend-Contract.md](./docs/Backend-Contract.md)
+- [docs/Stacks-Implementation-Status.md](./docs/Stacks-Implementation-Status.md)
 
 ## Getting Started
 
@@ -525,7 +567,7 @@ The product is being built with clear boundaries:
 
 This separation is intentional so the worldbuilding and asset pipeline can evolve without coupling the game client directly to external wallet or payment infrastructure.
 
-See [docs/Stacks2D-Architecture.md](docs/Stacks2D-Architecture.md) for diagrams and module boundaries.
+See [docs/Overview.md](docs/Overview.md) for the top-level architecture and [docs/Backend-Contract.md](docs/Backend-Contract.md) for write-boundary rules.
 
 ### Agent Framework Direction
 
@@ -534,11 +576,11 @@ The long-term agent architecture is layered rather than monolithic.
 ```mermaid
 flowchart TD
   U[User or agent owner] --> P[Parent agent]
-  P <--> B[Basket strategy]
+  P <--> B[Coordinator]
   O[Offchain logic<br/>Zero Authority, Tenero, LLM signals] --> B
-  B --> W1[Guide strategy]
-  B --> W2[Market strategy]
-  B --> W3[Quest strategy]
+  B --> W1[Guide policy]
+  B --> W2[Market policy]
+  B --> W3[Quest policy]
   W1 --> N1[World node or service node]
   W2 --> N2[World node or protocol node]
   W3 --> N3[World node or service node]
@@ -546,7 +588,7 @@ flowchart TD
 
 In `stacks2d`, that means:
 - the world stays the interface layer
-- strategy agents stay modular
+- role-specific agents stay modular
 - protocol and payment execution stay behind explicit nodes
 - offchain signals help orchestrate decisions without taking over the engine
 

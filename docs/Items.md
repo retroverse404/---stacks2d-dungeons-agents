@@ -44,6 +44,28 @@ Currently, the system focuses on **item creation and editing** — defining the 
 - Item icons in the game world
 - Unique/one-of-a-kind enforcement
 
+## TinyRealms Item Taxonomy
+
+The project now has five distinct layers. They should not be mixed together.
+
+| Layer | What it is | Examples |
+|------|-------------|----------|
+| **world objects** | in-world props or terminals, not inventory items | bookshelf, phonograph, price board, quest board |
+| **offchain items** | normal gameplay inventory items stored in Convex | broom, pickups, tools, current inventory items |
+| **SFT items** | repeatable onchain item classes and resources | coffee, beer, tavern supply, quest credit, dungeon key, music pass |
+| **NFT artifacts** | unique collectibles / relics | wax cylinder, cassette, floppy disk |
+| **currency** | fungible value units | STX now, QTC later |
+
+Practical rule:
+
+- if it is a prop in the room, it is probably a **world object**
+- if it is a normal gameplay pickup, it is probably an **offchain item**
+- if players can hold multiple interchangeable copies onchain, it is an **SFT item**
+- if it is unique and culturally meaningful, it is an **NFT artifact**
+- if it is a spendable balance, it is **currency**
+
+For the contract-side explanation, see [Contract-Cheat-Sheet.md](/home/rv404/RV404-Lab/PRODUCTIVITY/Obsidian/Test-1a/Apps/tinyrealms/docs/Contract-Cheat-Sheet.md).
+
 ---
 
 ## Item Architecture

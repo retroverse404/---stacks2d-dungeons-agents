@@ -138,7 +138,7 @@ This proves real backend connector execution, not just themed UI.
 
 ## Lightweight Gossip Layer
 
-For the hackathon scope, `gossip` should be understood as app-level event propagation, not a separate protocol.
+In the current implementation, `gossip` should be understood as app-level event propagation, not a separate protocol.
 
 The current foundation already exists:
 - typed `worldEvents`
@@ -201,11 +201,11 @@ The long-term agentic model is hierarchical, not a single giant NPC brain.
 ```mermaid
 flowchart TD
   U[User or owner] --> P[Parent agent]
-  P <--> B[Basket strategy]
+  P <--> B[Coordinator]
   O[Offchain logic<br/>Zero Authority, Tenero, LLM signals] --> B
-  B --> S1[Guide strategy]
-  B --> S2[Market strategy]
-  B --> S3[Quest strategy]
+  B --> S1[Guide policy]
+  B --> S2[Market policy]
+  B --> S3[Quest policy]
   S1 --> N1[World node or service node]
   S2 --> N2[Protocol or service node]
   S3 --> N3[World node or service node]
@@ -362,7 +362,7 @@ Important truth:
 - this SFT/GameFi layer is part of the architecture roadmap
 - it is not yet implemented in the current repo
 
-## Judge-Facing Summary
+## Current Summary
 
 The strongest accurate description today is:
 
@@ -391,7 +391,7 @@ Keep separate:
 That allows:
 - faster asset and level iteration
 - lower technical debt
-- cleaner grant positioning
+- clearer integration boundaries
 - safer future wallet work
 
 ## Stacks and AIBTC Positioning

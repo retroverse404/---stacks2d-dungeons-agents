@@ -4,7 +4,7 @@ This note calibrates how wallet-backed agents should work in `stacks2d (tinyreal
 
 ## Current Decision
 
-For the hackathon and current WIP phase:
+For the current implementation phase:
 
 - core named agents may each have their own **testnet wallet**
 - wallet identity and wallet execution permissions are **not the same thing**
@@ -14,7 +14,7 @@ For the hackathon and current WIP phase:
 
 This preserves:
 
-- the hackathon requirement that agents are wallet-backed
+- a clean wallet-backed agent model
 - a clean onchain identity story
 - low operational risk
 - a sane permission model

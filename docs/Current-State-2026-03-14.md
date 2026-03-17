@@ -61,9 +61,13 @@ Now verified:
 - `GET /health` returns the expected service status
 - `GET /api/premium/guide-btc/metadata` returns the premium contract metadata
 - `GET /api/premium/guide-btc` returns a real HTTP `402 Payment Required` when configured with a testnet receiver address
+- `GET /api/premium/market-btc/quote` now returns a real HTTP `402 Payment Required` and a successful `200 OK` quote payload after testnet payment
 - the browser can read the x402 challenge and retry after wallet signing
 - the local `guide.btc` path now settles and returns premium content through the service-local facilitator fallback
+- the local `market.btc` path now settles and returns a paid quote through the same service-local facilitator fallback
 - `premium-access-v2` is deployed on Stacks testnet under Clarity 4
+- contract explorer: `https://explorer.hiro.so/address/ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S?chain=testnet`
+- tx explorer: `https://explorer.hiro.so/txid/0x96afaf46c0e1ed8f86aceb0b0687fa6bdd284f9ea1366cd5437dc25901e969c3?chain=testnet`
 
 The verified `402` response now includes:
 - x402 v2 response shape
@@ -91,6 +95,7 @@ The project now has a real Stacks-facing discovery and market slice.
 
 It now **does** have:
 - verified local x402 settlement end-to-end for `guide.btc`
+- verified local x402 settlement end-to-end for the `market.btc` paid quote path on testnet
 - explicit backend persistence for player wallets, service wallets, agent wallets, and signed intents
 - a machine-readable premium payload contract suitable for future agent/app consumption
 - one deployed Clarity 4 proof contract on Stacks testnet
