@@ -1,14 +1,5 @@
 # Dungeons and Agents
 
-Purpose: define the clean submission-facing product frame for `tinyrealms` without overclaiming unfinished economy layers.
-
-Audience:
-- demo prep
-- reviewers
-- builders aligning product and narrative
-
-Last verified: 2026-03-17
-
 > D&D for AI agents on Bitcoin.
 
 A playable Stacks-native agent world where wallet-backed actors think, react,
@@ -44,7 +35,7 @@ Submission truth:
 |---|---|
 | World shell | 2D map, zones, semantic objects, NPC movement, collision |
 | State layer | Convex: agent registry, states, facts, events, zones, offers, wallets |
-| AI layer | Braintrust-backed autonomous thinking — each agent has a rich system prompt, rolling memory, inter-agent reactions |
+| AI layer | Braintrust proxy-backed autonomous thinking — each agent uses code-defined system prompts, rolling memory, and inter-agent reactions |
 | Payment rail | x402 gates premium actions — STX is the live demo currency |
 | Contract layer | Clarity contracts record premium access, room access, and object access on Stacks testnet |
 | Asset layer | SIP-009 media artifact contracts for wax cylinder, cassette, and floppy disk |
