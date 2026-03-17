@@ -1,3 +1,7 @@
+/* -----------------------------------------------------------------------
+   Mode Toggle — uses global Stacks tokens
+   ----------------------------------------------------------------------- */
+
 .mode-toggle {
   position: absolute;
   top: 12px;
@@ -18,12 +22,15 @@
 .mode-toggle-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 5px;
+  padding: 8px 12px;
   background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-ui);
   border-right: 1px solid var(--border);
+  transition: background 0.15s, color 0.15s;
 }
 
 .mode-toggle-btn:last-child {
@@ -32,27 +39,35 @@
 
 .mode-toggle-btn:hover {
   background: var(--bg-hover);
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
 .mode-toggle-btn.active {
-  background: var(--accent);
-  color: white;
+  background: rgba(252, 100, 50, 0.1);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .mode-icon {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .portal-btn {
-  background: rgba(108, 92, 231, 0.15);
-  color: #a29bfe;
-  font-size: 15px;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 8px 10px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .portal-btn:hover {
-  background: rgba(108, 92, 231, 0.35);
-  color: #d6d3ff;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 .signout-btn {
@@ -60,11 +75,26 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 8px 12px;
-  font-size: 16px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .signout-btn:hover {
-  background: var(--danger);
-  color: white;
-  border-color: var(--danger);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border-color: var(--border-strong);
+}
+
+/* Mobile — icon-only */
+@media (max-width: 600px) {
+  .mode-toggle-btn {
+    padding: 10px 10px;
+  }
+
+  .mode-toggle-btn .mode-label {
+    display: none;
+  }
 }

@@ -2,14 +2,15 @@
  * Mode toggle buttons – play / build / sprite-edit + sound toggle + sign-out.
  */
 import type { AppMode } from "../engine/types.ts";
+import { IconPlay, IconBuild, IconSprites, IconNpcs, IconItems, IconMaps, IconSoundOn, IconSoundOff, IconSignOut } from "../lib/icons.ts";
 import "./ModeToggle.css";
 
 const modes: { key: AppMode; label: string; icon: string }[] = [
-  { key: "play", label: "Play", icon: "\u25B6" },       // ▶
-  { key: "build", label: "Build", icon: "\uD83D\uDD27" }, // 🔧
-  { key: "sprite-edit", label: "Sprites", icon: "\uD83C\uDFA8" }, // 🎨
-  { key: "npc-edit", label: "NPCs", icon: "\uD83E\uDDD9" },    // 🧙
-  { key: "item-edit", label: "Items", icon: "\u2694\uFE0F" },   // ⚔️
+  { key: "play",        label: "Play",    icon: IconPlay },
+  { key: "build",       label: "Build",   icon: IconBuild },
+  { key: "sprite-edit", label: "Sprites", icon: IconSprites },
+  { key: "npc-edit",    label: "NPCs",    icon: IconNpcs },
+  { key: "item-edit",   label: "Items",   icon: IconItems },
 ];
 
 export interface ModeToggleOptions {
@@ -57,7 +58,7 @@ export class ModeToggle {
       const mapsBtn = document.createElement("button");
       mapsBtn.className = "mode-toggle-btn maps-btn portal-btn";
       mapsBtn.title = "Maps";
-      mapsBtn.textContent = "\uD83C\uDF0D"; // 🌍
+      mapsBtn.innerHTML = IconMaps;
       mapsBtn.addEventListener("click", () => onMaps());
       btnGroup.appendChild(mapsBtn);
     }
@@ -68,7 +69,7 @@ export class ModeToggle {
       this.soundBtn = document.createElement("button");
       this.soundBtn.className = "mode-toggle-btn sound-btn";
       this.soundBtn.title = "Toggle Sound (M)";
-      this.soundBtn.textContent = "\uD83D\uDD0A"; // 🔊
+      this.soundBtn.innerHTML = IconSoundOn;
       this.soundBtn.addEventListener("click", () => {
         const muted = onToggle();
         this.setSoundIcon(muted);
@@ -78,8 +79,8 @@ export class ModeToggle {
 
     const signOut = document.createElement("button");
     signOut.className = "mode-toggle-btn signout-btn";
-    signOut.title = "Back to Character Select";
-    signOut.textContent = "🏠"; // 🏠
+    signOut.title = "Back to Agent Select";
+    signOut.innerHTML = IconSignOut;
     signOut.addEventListener("click", () => window.location.reload());
 
     this.el.append(btnGroup, signOut);
@@ -88,7 +89,7 @@ export class ModeToggle {
   /** Update the sound button icon */
   setSoundIcon(muted: boolean) {
     if (this.soundBtn) {
-      this.soundBtn.textContent = muted ? "\uD83D\uDD07" : "\uD83D\uDD0A"; // 🔇 or 🔊
+      this.soundBtn.innerHTML = muted ? IconSoundOff : IconSoundOn;
       this.soundBtn.title = muted ? "Unmute (M)" : "Mute (M)";
     }
   }

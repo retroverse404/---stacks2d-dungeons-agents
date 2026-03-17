@@ -18,6 +18,7 @@ import type { DialogueNode } from "../splash/screens/DialogueSplash.ts";
 import { createGuideNpcSplash } from "../splash/screens/GuideNpcSplash.ts";
 import { createMarketNpcSplash } from "../splash/screens/MarketNpcSplash.ts";
 import { createQuestsNpcSplash } from "../splash/screens/QuestsNpcSplash.ts";
+import { createMelNpcSplash } from "../splash/screens/MelNpcSplash.ts";
 import { getConvexClient } from "../lib/convexClient.ts";
 import { api } from "../../convex/_generated/api";
 
@@ -291,8 +292,7 @@ export class EntityLayer {
    * Keeps hardcoded NPCs like "jane".
    */
   removeAllPlacedNPCs() {
-    // Convex IDs are long strings; hardcoded ones are short like "jane"
-    const toRemove = this.npcs.filter((n) => n.id.length > 20);
+    const toRemove = this.npcs.filter((n) => n.serverDriven === true);
     for (const npc of toRemove) {
       this.removeNPC(npc.id);
     }
@@ -367,6 +367,12 @@ export class EntityLayer {
           existing.setServerPosition(s.x, s.y, s.vx, s.vy, s.direction);
         }
       } else {
+        // Guard: skip if an NPC with the same instanceName already exists (duplicate npcState rows)
+        if (s.instanceName && this.npcs.some((n) => n.name === s.instanceName)) {
+          console.warn(`[EntityLayer] Skipping duplicate NPC instanceName="${s.instanceName}" (_id=${s._id})`);
+          continue;
+        }
+
         // Create new NPC instance
         const def = defsMap.get(s.spriteDefName);
         if (!def) continue;
@@ -848,6 +854,10 @@ export class EntityLayer {
     };
   }
 
+  hasNearbyNpc(): boolean {
+    return this.nearestNPC !== null;
+  }
+
   private updateNPCInteraction(input: InputManager) {
     // Find nearest NPC within interact radius
     let nearest: NPC | null = null;
@@ -935,6 +945,26 @@ export class EntityLayer {
         id: `quests-btc-${npc.id}`,
         create: (props) =>
           createQuestsNpcSplash({
+            ...props,
+            npcName: npc.name,
+          }),
+        transparent: true,
+        pausesGame: true,
+        onClose: () => {
+          this.inDialogue = false;
+        },
+      });
+      return;
+    }
+
+    if (npc.name === "Mel") {
+      void this.appendWorldEvent("curation-surface-opened", npc, {
+        summary: `${this.profileLabel()} opened the Mel curation desk.`,
+      });
+      splashManager.push({
+        id: `mel-curator-${npc.id}`,
+        create: (props) =>
+          createMelNpcSplash({
             ...props,
             npcName: npc.name,
           }),

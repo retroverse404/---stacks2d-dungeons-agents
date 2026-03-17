@@ -35,6 +35,23 @@ export class Camera {
     }
   }
 
+  clampToWorld(worldW: number, worldH: number) {
+    const halfViewportW = this.viewportW / 2;
+    const halfViewportH = this.viewportH / 2;
+
+    if (worldW <= this.viewportW) {
+      this.x = worldW / 2;
+    } else {
+      this.x = Math.min(worldW - halfViewportW, Math.max(halfViewportW, this.x));
+    }
+
+    if (worldH <= this.viewportH) {
+      this.y = worldH / 2;
+    } else {
+      this.y = Math.min(worldH - halfViewportH, Math.max(halfViewportH, this.y));
+    }
+  }
+
   /** Convert screen coordinates to world coordinates */
   screenToWorld(screenX: number, screenY: number) {
     return {

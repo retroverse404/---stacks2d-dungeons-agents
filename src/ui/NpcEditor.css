@@ -171,27 +171,27 @@
   padding: 2px 6px;
   border-radius: 8px;
   text-transform: lowercase;
-  border: 1px solid transparent;
-  color: var(--text-secondary);
-  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--bg-hover);
 }
 
 .npc-editor-vis-tag.system {
-  color: #d7c9ff;
-  background: rgba(134, 84, 255, 0.16);
-  border-color: rgba(134, 84, 255, 0.35);
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
 }
 
 .npc-editor-vis-tag.public {
-  color: #a8e6ff;
-  background: rgba(52, 152, 219, 0.16);
-  border-color: rgba(52, 152, 219, 0.35);
+  color: #6dcfa0;
+  background: rgba(48, 164, 108, 0.12);
+  border-color: rgba(48, 164, 108, 0.22);
 }
 
 .npc-editor-vis-tag.private {
-  color: #b8f6cf;
-  background: rgba(46, 204, 113, 0.16);
-  border-color: rgba(46, 204, 113, 0.35);
+  color: var(--warning);
+  background: rgba(243, 220, 0, 0.1);
+  border-color: rgba(243, 220, 0, 0.2);
 }
 
 .npc-editor-empty {
@@ -449,17 +449,17 @@
   align-items: center;
   gap: 3px;
   padding: 3px 8px;
-  background: rgba(108, 92, 231, 0.15);
-  border: 1px solid rgba(108, 92, 231, 0.3);
+  background: rgba(252, 100, 50, 0.1);
+  border: 1px solid rgba(252, 100, 50, 0.2);
   border-radius: 10px;
   font-size: 11px;
-  color: #a29bfe;
+  color: var(--accent);
 }
 
 .npc-editor-tag-remove {
   background: none;
   border: none;
-  color: rgba(162, 155, 254, 0.6);
+  color: rgba(252, 100, 50, 0.5);
   font-size: 12px;
   padding: 0;
   cursor: pointer;
@@ -531,24 +531,25 @@
 }
 
 .npc-editor-btn.accent {
-  background: #1a6b2a;
-  border-color: #25923a;
+  background: var(--success);
+  border-color: var(--success);
   color: white;
   font-weight: 600;
 }
 
 .npc-editor-btn.accent:hover {
-  background: #25923a;
+  filter: brightness(1.1);
 }
 
 .npc-editor-btn.danger {
-  background: #6b1a1a;
-  border-color: #923025;
-  color: #ffa0a0;
+  background: rgba(227, 42, 53, 0.15);
+  border-color: rgba(227, 42, 53, 0.3);
+  color: #f08090;
 }
 
 .npc-editor-btn.danger:hover {
-  background: #923025;
+  background: var(--danger);
+  color: white;
 }
 
 .npc-editor-btn.small {
@@ -558,7 +559,7 @@
 
 .npc-editor-status {
   font-size: 11px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   min-height: 16px;
   color: var(--text-muted);
   display: flex;

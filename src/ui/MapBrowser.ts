@@ -84,13 +84,22 @@ export class MapBrowser {
     // Header
     const header = document.createElement("div");
     header.className = "map-browser-header";
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "map-browser-title-wrap";
+    const eyebrow = document.createElement("div");
+    eyebrow.className = "map-browser-eyebrow";
+    eyebrow.textContent = "Navigate";
     const h2 = document.createElement("h2");
-    h2.textContent = "World Maps";
+    h2.textContent = "Maps";
+    const subtitle = document.createElement("p");
+    subtitle.className = "map-browser-subtitle";
+    subtitle.textContent = "Choose a destination.";
     const closeBtn = document.createElement("button");
     closeBtn.className = "map-browser-close";
     closeBtn.textContent = "\u2715"; // ✕
     closeBtn.addEventListener("click", () => this.hide());
-    header.append(h2, closeBtn);
+    titleWrap.append(eyebrow, h2, subtitle);
+    header.append(titleWrap, closeBtn);
 
     // Body
     this.bodyEl = document.createElement("div");
@@ -136,26 +145,12 @@ export class MapBrowser {
     if (this.maps.length === 0) {
       this.bodyEl.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">No maps yet. Create one below!</div>';
     } else {
-      const legend = document.createElement("div");
-      legend.className = "map-visibility-legend";
-      legend.innerHTML = `
-        <span class="map-legend-item"><span class="map-badge private">Private</span> owner-only portal targets</span>
-        <span class="map-legend-item"><span class="map-badge public">Public</span> superusers can link portals</span>
-        <span class="map-legend-item"><span class="map-badge system">System</span> global/start-map eligible</span>
-      `;
-      this.bodyEl.appendChild(legend);
-
       const list = document.createElement("div");
       list.className = "map-list";
 
       for (const m of this.maps) {
         const card = document.createElement("div");
         card.className = `map-card ${m.name === currentMap ? "current" : ""}`;
-
-        // Icon
-        const iconEl = document.createElement("div");
-        iconEl.className = "map-card-icon";
-        iconEl.textContent = m.mapType === "system" ? "\uD83C\uDFE0" : m.combatEnabled ? "\u2694" : "\uD83D\uDDFA"; // 🏠⚔🗺
 
         // Info
         const info = document.createElement("div");
@@ -207,10 +202,10 @@ export class MapBrowser {
         // System maps can only be changed by superusers via CLI.
         const isSystemMap = m.mapType === "system";
         const canEditType = !isSystemMap && (!!m.ownedByCurrentUser || this.callbacks.isAdmin);
+        let adminRow: HTMLElement | null = null;
         if (canEditType) {
-          const typeWrap = document.createElement("div");
-          typeWrap.className = "map-card-badges";
-          typeWrap.style.gap = "6px";
+          adminRow = document.createElement("div");
+          adminRow.className = "map-card-admin-row";
 
           const typeSelect = document.createElement("select");
           typeSelect.className = "profile-select";
@@ -220,9 +215,7 @@ export class MapBrowser {
 
           const saveTypeBtn = document.createElement("button");
           saveTypeBtn.className = "map-card-travel";
-          saveTypeBtn.textContent = "Save Type";
-          saveTypeBtn.style.width = "auto";
-          saveTypeBtn.style.padding = "8px 10px";
+          saveTypeBtn.textContent = "Apply";
           saveTypeBtn.addEventListener("click", async (e) => {
             e.stopPropagation();
             saveTypeBtn.disabled = true;
@@ -241,19 +234,18 @@ export class MapBrowser {
               saveTypeBtn.textContent = "Error";
               console.warn("set map type failed:", err);
               setTimeout(() => {
-                saveTypeBtn.textContent = original || "Save Type";
+                saveTypeBtn.textContent = original || "Apply";
                 saveTypeBtn.disabled = false;
               }, 900);
               return;
             }
             setTimeout(() => {
-              saveTypeBtn.textContent = original || "Save Type";
+              saveTypeBtn.textContent = original || "Apply";
               saveTypeBtn.disabled = false;
             }, 900);
           });
 
-          typeWrap.append(typeSelect, saveTypeBtn);
-          info.appendChild(typeWrap);
+          adminRow.append(typeSelect, saveTypeBtn);
         }
 
         // Travel button
@@ -272,7 +264,8 @@ export class MapBrowser {
           });
         }
 
-        card.append(iconEl, info, badges, travelBtn);
+        card.append(info, badges, travelBtn);
+        if (adminRow) card.appendChild(adminRow);
         list.appendChild(card);
       }
 
@@ -286,7 +279,7 @@ export class MapBrowser {
     if (!this.createFormVisible) {
       const toggleBtn = document.createElement("button");
       toggleBtn.className = "map-create-toggle";
-      toggleBtn.textContent = "+ Create New Map";
+      toggleBtn.textContent = "New map";
       toggleBtn.addEventListener("click", () => {
         this.createFormVisible = true;
         this.render();

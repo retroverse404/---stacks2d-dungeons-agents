@@ -3,25 +3,62 @@
  * allows creating new ones, deleting them, and viewing account info.
  */
 import { getConvexClient } from "../lib/convexClient.ts";
+import {
+  connectStacksWallet,
+  disconnectStacksWallet,
+  formatStacksAddress,
+  formatStacksProvider,
+  getCachedStacksAddress,
+  getCachedStacksProviderId,
+  getInstalledStacksProviderIds,
+  type StacksWalletProviderId,
+} from "../lib/stacksWallet.ts";
 import { api } from "../../convex/_generated/api";
 import type { ProfileData } from "../engine/types.ts";
 import "./ProfileScreen.css";
 
+const DEFAULT_PROFILE_BACKGROUND_VIDEO_URL = "/assets/Video%20Loops/DnA2A.webm";
+const DEFAULT_PROFILE_SOUNDTRACK_URL = "/assets/audio/Opening%20To%20Profion%27s%20Dungeon.mp3";
+const DEFAULT_PROFILE_SOUNDTRACK_TITLE = "Opening To Profion's Dungeon";
+const DEFAULT_PROFILE_SOUNDTRACK_ARTIST = "Justin Caine Burnett";
+
 // Available character sprites the player can pick from
 const SPRITE_OPTIONS = [
+  { label: "Guest", url: "/assets/characters/guest.json" },
   { label: "Villager 1", url: "/assets/characters/villager2.json" },
   { label: "Villager 2", url: "/assets/characters/villager3.json" },
   { label: "Villager 3", url: "/assets/characters/villager4.json" },
   { label: "Villager 4", url: "/assets/characters/villager5.json" },
+  { label: "Jane", url: "/assets/characters/villager-jane.json" },
   { label: "Woman", url: "/assets/characters/woman-med.json" },
 ];
 
 const PROFILE_COLORS = [
-  "#6c5ce7", "#e74c3c", "#2ecc71", "#f39c12", "#00cec9", "#fd79a8",
+  "#7a8796", "#a46a4b", "#4f7a63", "#8d7a45", "#4c7a7d", "#8b6b78",
 ];
 
 // Trash icon SVG
 const TRASH_ICON = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>`;
+
+function createProfileBackgroundMedia() {
+  const shell = document.createElement("div");
+  shell.className = "profile-background-shell";
+
+  const video = document.createElement("video");
+  video.className = "profile-background-video";
+  video.src =
+    (import.meta.env.VITE_PROFILE_BACKGROUND_VIDEO_URL as string | undefined) ||
+    DEFAULT_PROFILE_BACKGROUND_VIDEO_URL;
+  video.autoplay = true;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.tabIndex = -1;
+  video.setAttribute("aria-hidden", "true");
+
+  shell.appendChild(video);
+  return shell;
+}
 
 export class ProfileScreen {
   readonly el: HTMLElement;
@@ -43,12 +80,26 @@ export class ProfileScreen {
   private profilesUnsub: (() => void) | null = null;
   private titleEl: HTMLElement | null = null;
   private subEl: HTMLElement | null = null;
+  private walletStatusEl: HTMLElement | null = null;
+  private soundtrackStatusEl: HTMLElement | null = null;
+  private soundtrackToggleBtn: HTMLButtonElement | null = null;
+  private soundtrackAudio: HTMLAudioElement | null = null;
+  private soundtrackNeedsGesture = false;
+  private soundtrackEnabled = true;
+  private leatherWalletBtn: HTMLButtonElement | null = null;
+  private xverseWalletBtn: HTMLButtonElement | null = null;
+  private otherWalletBtn: HTMLButtonElement | null = null;
   private superuserBtn: HTMLButtonElement | null = null;
   private actingSuperuserProfileId: string | null = null;
 
   // Confirm dialog
   private confirmOverlay: HTMLElement | null = null;
   private deleteStatusEl: HTMLElement | null = null;
+  private readonly handleSoundtrackGesture = () => {
+    if (!this.soundtrackEnabled) return;
+    if (!this.soundtrackNeedsGesture) return;
+    void this.playSoundtrack();
+  };
 
   constructor(
     onSelect: (profile: ProfileData) => void,
@@ -59,6 +110,15 @@ export class ProfileScreen {
 
     this.el = document.createElement("div");
     this.el.className = "profile-screen";
+    this.el.appendChild(createProfileBackgroundMedia());
+
+    const overlay = document.createElement("div");
+    overlay.className = "profile-overlay";
+    this.el.appendChild(overlay);
+
+    const content = document.createElement("div");
+    content.className = "profile-content";
+    this.el.appendChild(content);
 
     // Top bar with account link + sign-out
     const topBar = document.createElement("div");
@@ -71,6 +131,48 @@ export class ProfileScreen {
     accountBtn.style.padding = "6px 14px";
     accountBtn.addEventListener("click", () => this.showAccountInfo());
     topBar.appendChild(accountBtn);
+
+    const leatherBtn = document.createElement("button");
+    leatherBtn.className = "profile-btn secondary";
+    leatherBtn.textContent = "Leather";
+    leatherBtn.style.fontSize = "12px";
+    leatherBtn.style.padding = "6px 14px";
+    this.leatherWalletBtn = leatherBtn;
+
+    const xverseBtn = document.createElement("button");
+    xverseBtn.className = "profile-btn secondary";
+    xverseBtn.textContent = "Xverse";
+    xverseBtn.style.fontSize = "12px";
+    xverseBtn.style.padding = "6px 14px";
+    this.xverseWalletBtn = xverseBtn;
+
+    const otherBtn = document.createElement("button");
+    otherBtn.className = "profile-btn secondary";
+    otherBtn.textContent = "Other Wallet";
+    otherBtn.style.fontSize = "12px";
+    otherBtn.style.padding = "6px 14px";
+    this.otherWalletBtn = otherBtn;
+
+    leatherBtn.addEventListener("click", () => {
+      void this.handleWalletAction("LeatherProvider", [leatherBtn, xverseBtn, otherBtn]);
+    });
+    xverseBtn.addEventListener("click", () => {
+      void this.handleWalletAction("XverseProviders.BitcoinProvider", [leatherBtn, xverseBtn, otherBtn]);
+    });
+    otherBtn.addEventListener("click", () => {
+      const cachedProviderId = getCachedStacksProviderId();
+      const providerId =
+        cachedProviderId &&
+        cachedProviderId !== "LeatherProvider" &&
+        cachedProviderId !== "XverseProviders.BitcoinProvider"
+          ? cachedProviderId
+          : undefined;
+      void this.handleWalletAction(providerId, [leatherBtn, xverseBtn, otherBtn]);
+    });
+
+    topBar.appendChild(leatherBtn);
+    topBar.appendChild(xverseBtn);
+    topBar.appendChild(otherBtn);
 
     this.superuserBtn = document.createElement("button");
     this.superuserBtn.className = "profile-btn secondary";
@@ -92,34 +194,87 @@ export class ProfileScreen {
     }
     this.el.appendChild(topBar);
 
+    const eyebrow = document.createElement("div");
+    eyebrow.className = "profile-eyebrow";
+    eyebrow.textContent = "Dungeons and Agents";
+    content.appendChild(eyebrow);
+
+    const categories = document.createElement("div");
+    categories.className = "profile-categories";
+    ["GameFi", "AI", "NFTs"].forEach((label) => {
+      const chip = document.createElement("span");
+      chip.textContent = label;
+      categories.appendChild(chip);
+    });
+    content.appendChild(categories);
+
     this.titleEl = document.createElement("h1");
-    this.titleEl.textContent = "Choose Your Character";
-    this.el.appendChild(this.titleEl);
+    this.titleEl.textContent = "Choose Your Agent";
+    content.appendChild(this.titleEl);
 
     this.subEl = document.createElement("div");
     this.subEl.className = "subtitle";
-    this.subEl.textContent = "Select an existing profile or create a new one";
-    this.el.appendChild(this.subEl);
+    this.subEl.textContent =
+      "Wallet-backed roles, paid actions, and live world state. Pick your role and step into the sandbox.";
+    content.appendChild(this.subEl);
+
+    this.walletStatusEl = document.createElement("div");
+    this.walletStatusEl.className = "profile-wallet-status";
+    content.appendChild(this.walletStatusEl);
+    this.renderWalletStatus(getCachedStacksAddress());
+    this.refreshWalletButtons();
+    void this.refreshWalletDiagnostics();
 
     this.listEl = document.createElement("div");
     this.listEl.className = "profile-list";
-    this.el.appendChild(this.listEl);
+    content.appendChild(this.listEl);
 
     this.formEl = this.buildCreateForm();
     this.formEl.style.display = "none";
-    this.el.appendChild(this.formEl);
+    content.appendChild(this.formEl);
 
     // Account info panel (hidden by default)
     this.accountEl = document.createElement("div");
     this.accountEl.className = "profile-account-panel";
     this.accountEl.style.display = "none";
-    this.el.appendChild(this.accountEl);
+    content.appendChild(this.accountEl);
 
     // Superuser panel (hidden by default)
     this.superuserEl = document.createElement("div");
     this.superuserEl.className = "profile-account-panel";
     this.superuserEl.style.display = "none";
-    this.el.appendChild(this.superuserEl);
+    content.appendChild(this.superuserEl);
+
+    const soundtrackBar = document.createElement("div");
+    soundtrackBar.className = "profile-soundtrack";
+
+    const soundtrackMeta = document.createElement("div");
+    soundtrackMeta.className = "profile-soundtrack-meta";
+
+    const soundtrackLabel = document.createElement("div");
+    soundtrackLabel.className = "profile-soundtrack-label";
+    soundtrackLabel.textContent = "Now Playing";
+    soundtrackMeta.appendChild(soundtrackLabel);
+
+    this.soundtrackStatusEl = document.createElement("div");
+    this.soundtrackStatusEl.className = "profile-soundtrack-status";
+    soundtrackMeta.appendChild(this.soundtrackStatusEl);
+
+    this.soundtrackToggleBtn = document.createElement("button");
+    this.soundtrackToggleBtn.className = "profile-soundtrack-toggle";
+    this.soundtrackToggleBtn.type = "button";
+    this.soundtrackToggleBtn.addEventListener("click", () => this.toggleSoundtrack());
+
+    soundtrackBar.append(soundtrackMeta, this.soundtrackToggleBtn);
+    content.appendChild(soundtrackBar);
+    this.renderSoundtrackStatus();
+    this.startSoundtrack();
+
+    const footerNote = document.createElement("div");
+    footerNote.className = "profile-footer-note";
+    footerNote.textContent =
+      "* Demo build. Some wallet, payment, and market features currently run on testnet or prototype infrastructure.";
+    content.appendChild(footerNote);
 
     // Confirm dialog overlay (hidden)
     this.confirmOverlay = document.createElement("div");
@@ -185,7 +340,7 @@ export class ProfileScreen {
     // "New" card
     const newCard = document.createElement("div");
     newCard.className = "profile-card new-profile";
-    newCard.innerHTML = `<div class="plus">+</div><div>New Character</div>`;
+    newCard.innerHTML = `<div class="plus">+</div><div>New Agent</div>`;
     newCard.addEventListener("click", () => this.showCreateForm());
     this.listEl.appendChild(newCard);
   }
@@ -198,7 +353,7 @@ export class ProfileScreen {
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "profile-delete-btn";
     deleteBtn.innerHTML = TRASH_ICON;
-    deleteBtn.title = "Delete character";
+    deleteBtn.title = "Delete agent";
     deleteBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.confirmDelete(profile);
@@ -229,8 +384,7 @@ export class ProfileScreen {
     statsRow.className = "stats-row";
     statsRow.innerHTML =
       `<span>Lv ${profile.stats.level}</span>` +
-      `<span>HP ${profile.stats.hp}/${profile.stats.maxHp}</span>` +
-      `<span>${profile.npcsChatted.length} NPCs</span>`;
+      `<span>${profile.npcsChatted.length} contacts</span>`;
     card.appendChild(statsRow);
 
     // Meta
@@ -383,7 +537,7 @@ export class ProfileScreen {
     form.className = "profile-create-form";
 
     const h2 = document.createElement("h2");
-    h2.textContent = "Create Character";
+    h2.textContent = "Create Agent";
     form.appendChild(h2);
 
     // Name field
@@ -393,7 +547,7 @@ export class ProfileScreen {
     nameLabel.textContent = "Name";
     this.nameInput = document.createElement("input");
     this.nameInput.type = "text";
-    this.nameInput.placeholder = "Enter character name...";
+    this.nameInput.placeholder = "Agent name";
     this.nameInput.maxLength = 24;
     nameField.append(nameLabel, this.nameInput);
     form.appendChild(nameField);
@@ -402,7 +556,7 @@ export class ProfileScreen {
     const spriteField = document.createElement("div");
     spriteField.className = "field";
     const spriteLabel = document.createElement("label");
-    spriteLabel.textContent = "Choose Sprite";
+    spriteLabel.textContent = "Appearance";
     spriteField.appendChild(spriteLabel);
 
     const picker = document.createElement("div");
@@ -599,6 +753,170 @@ export class ProfileScreen {
     this.statusEl.className = `profile-status${isError ? " error" : ""}`;
   }
 
+  private refreshWalletButtons() {
+    const address = getCachedStacksAddress();
+    const providerId = getCachedStacksProviderId();
+    if (!this.leatherWalletBtn || !this.xverseWalletBtn || !this.otherWalletBtn) return;
+
+    const applyLabel = (
+      btn: HTMLButtonElement,
+      buttonProviderId: StacksWalletProviderId | undefined,
+      label: string,
+      disabled = false,
+    ) => {
+      btn.textContent = label;
+      btn.disabled = disabled;
+      if (buttonProviderId) {
+        btn.dataset.providerId = buttonProviderId;
+      } else {
+        delete btn.dataset.providerId;
+      }
+    };
+
+    if (!address || !providerId) {
+      applyLabel(this.leatherWalletBtn, "LeatherProvider", "Leather");
+      applyLabel(this.xverseWalletBtn, "XverseProviders.BitcoinProvider", "Xverse");
+      applyLabel(this.otherWalletBtn, undefined, "Other Wallet");
+      return;
+    }
+
+    if (providerId === "LeatherProvider") {
+      applyLabel(this.leatherWalletBtn, "LeatherProvider", "Disconnect Leather");
+      applyLabel(this.xverseWalletBtn, "XverseProviders.BitcoinProvider", "Switch to Xverse");
+      applyLabel(this.otherWalletBtn, undefined, "Other Wallet");
+      return;
+    }
+
+    if (providerId === "XverseProviders.BitcoinProvider") {
+      applyLabel(this.leatherWalletBtn, "LeatherProvider", "Switch to Leather");
+      applyLabel(this.xverseWalletBtn, "XverseProviders.BitcoinProvider", "Disconnect Xverse");
+      applyLabel(this.otherWalletBtn, undefined, "Other Wallet");
+      return;
+    }
+
+    applyLabel(this.leatherWalletBtn, "LeatherProvider", "Switch to Leather");
+    applyLabel(this.xverseWalletBtn, "XverseProviders.BitcoinProvider", "Switch to Xverse");
+    applyLabel(this.otherWalletBtn, providerId, `Disconnect ${formatStacksProvider(providerId)}`);
+  }
+
+  private async handleWalletAction(
+    providerId: StacksWalletProviderId | undefined,
+    buttons: HTMLButtonElement[],
+  ) {
+    const providerName = providerId ? formatStacksProvider(providerId) : "wallet";
+    const cachedAddress = getCachedStacksAddress();
+    const cachedProviderId = getCachedStacksProviderId();
+
+    if (providerId && cachedAddress && cachedProviderId === providerId) {
+      for (const button of buttons) {
+        button.disabled = true;
+      }
+      this.renderWalletStatus(null, `Disconnecting ${providerName}...`);
+      try {
+        await disconnectStacksWallet();
+        this.renderWalletStatus(null, `${providerName} disconnected.`);
+        this.refreshWalletButtons();
+      } catch (err: any) {
+        this.renderWalletStatus(null, err?.message || `Failed to disconnect ${providerName}.`, true);
+      } finally {
+        for (const button of buttons) {
+          button.disabled = false;
+        }
+      }
+      return;
+    }
+
+    const installedProviders = await getInstalledStacksProviderIds();
+    if (providerId && !installedProviders.includes(providerId)) {
+      this.renderWalletStatus(
+        null,
+        `${providerName} is not detected in this browser profile. Enable or unlock that extension and try again.`,
+        true,
+      );
+      return;
+    }
+
+    const btn =
+      (providerId
+        ? buttons.find((button) => button.dataset.providerId === providerId)
+        : this.otherWalletBtn) ?? buttons[0];
+    const originalLabel = btn.textContent || providerName;
+    for (const button of buttons) {
+      button.disabled = true;
+    }
+    btn.textContent = "Connecting...";
+    this.renderWalletStatus(
+      null,
+      providerId
+        ? `Connecting ${providerName} on Stacks testnet...`
+        : "Opening wallet chooser on Stacks testnet...",
+    );
+
+    try {
+      const account = await connectStacksWallet("testnet", {
+        forceWalletSelect: true,
+        providerId,
+      });
+      this.renderWalletStatus(account.address);
+      this.refreshWalletButtons();
+    } catch (err: any) {
+      console.warn("Failed to connect wallet:", err);
+      btn.textContent = originalLabel;
+      const message =
+        typeof err?.message === "string" && err.message.includes("Wallet connection timed out")
+          ? `${
+              providerId ? providerName : "The selected wallet"
+            } did not answer. Unlock the extension, approve the prompt, or disable the other Stacks wallet and try again.`
+          : err?.message === "Wallet access denied." ||
+              err?.message === "Access denied." ||
+              err?.code === -32002
+            ? `${
+                providerId ? providerName : "The selected wallet"
+              } rejected the account-access request. Open the extension and approve the connection prompt, then try again.`
+          : err?.message || `Failed to connect ${providerId ? providerName : "wallet"}.`;
+      this.renderWalletStatus(null, message, true);
+    } finally {
+      for (const button of buttons) {
+        button.disabled = false;
+      }
+      this.refreshWalletButtons();
+    }
+  }
+
+  private async refreshWalletDiagnostics() {
+    try {
+      const installedProviders = await getInstalledStacksProviderIds();
+      if (getCachedStacksAddress()) return;
+      if (installedProviders.length === 0) {
+        this.renderWalletStatus(
+          null,
+          "No supported Stacks wallet extension is detected in this browser profile.",
+          true,
+        );
+        return;
+      }
+
+      const labels = installedProviders.map((providerId) => formatStacksProvider(providerId));
+      this.renderWalletStatus(
+        null,
+        `Detected wallets: ${labels.join(", ")}. Connect a testnet wallet before using premium x402 actions.`,
+      );
+    } catch (error) {
+      console.warn("Failed to inspect installed wallets:", error);
+    }
+  }
+
+  private renderWalletStatus(address: string | null, message?: string, isError = false) {
+    if (!this.walletStatusEl) return;
+    const providerId = getCachedStacksProviderId();
+    this.walletStatusEl.textContent = message
+      ? message
+      : address
+        ? `Payer wallet connected: ${formatStacksAddress(address)} via ${formatStacksProvider(providerId)}`
+        : "No payer wallet connected yet. Connect a testnet wallet before using premium x402 actions.";
+    this.walletStatusEl.className = `profile-wallet-status${isError ? " error" : ""}`;
+  }
+
   // ---------------------------------------------------------------------------
   // Account info panel
   // ---------------------------------------------------------------------------
@@ -646,7 +964,7 @@ export class ProfileScreen {
       // Profiles section
       if (info.profiles.length > 0) {
         const profilesHeader = document.createElement("h3");
-        profilesHeader.textContent = "Characters";
+        profilesHeader.textContent = "Agents";
         this.accountEl.appendChild(profilesHeader);
 
         for (const p of info.profiles) {
@@ -981,9 +1299,86 @@ export class ProfileScreen {
     this.onSignOut?.();
   }
 
+  private startSoundtrack() {
+    if (typeof window === "undefined") return;
+    if (this.soundtrackAudio) {
+      void this.playSoundtrack();
+      return;
+    }
+
+    const audio = new Audio(
+      (import.meta.env.VITE_PROFILE_SOUNDTRACK_URL as string | undefined) ||
+      DEFAULT_PROFILE_SOUNDTRACK_URL,
+    );
+    audio.loop = true;
+    audio.preload = "auto";
+    audio.volume = 0.42;
+    this.soundtrackAudio = audio;
+
+    document.addEventListener("pointerdown", this.handleSoundtrackGesture);
+    void this.playSoundtrack();
+  }
+
+  private async playSoundtrack() {
+    if (!this.soundtrackAudio || !this.soundtrackEnabled) return;
+    try {
+      await this.soundtrackAudio.play();
+      this.soundtrackNeedsGesture = false;
+    } catch {
+      this.soundtrackNeedsGesture = true;
+    }
+    this.renderSoundtrackStatus();
+  }
+
+  private toggleSoundtrack() {
+    this.soundtrackEnabled = !this.soundtrackEnabled;
+    if (!this.soundtrackAudio) {
+      if (this.soundtrackEnabled) this.startSoundtrack();
+      this.renderSoundtrackStatus();
+      return;
+    }
+
+    if (this.soundtrackEnabled) {
+      void this.playSoundtrack();
+    } else {
+      this.soundtrackAudio.pause();
+      this.soundtrackNeedsGesture = false;
+      this.renderSoundtrackStatus();
+    }
+  }
+
+  private renderSoundtrackStatus() {
+    if (this.soundtrackStatusEl) {
+      let detail = `${DEFAULT_PROFILE_SOUNDTRACK_TITLE} · ${DEFAULT_PROFILE_SOUNDTRACK_ARTIST}`;
+      if (!this.soundtrackEnabled) {
+        detail = `${detail} · muted`;
+      } else if (this.soundtrackNeedsGesture) {
+        detail = `${detail} · tap anywhere for sound`;
+      }
+      this.soundtrackStatusEl.textContent = detail;
+    }
+
+    if (this.soundtrackToggleBtn) {
+      if (!this.soundtrackEnabled) {
+        this.soundtrackToggleBtn.textContent = "Sound Off";
+      } else if (this.soundtrackNeedsGesture) {
+        this.soundtrackToggleBtn.textContent = "Tap for Sound";
+      } else {
+        this.soundtrackToggleBtn.textContent = "Sound On";
+      }
+    }
+  }
+
   destroy() {
     this.profilesUnsub?.();
     this.profilesUnsub = null;
+    document.removeEventListener("pointerdown", this.handleSoundtrackGesture);
+    if (this.soundtrackAudio) {
+      this.soundtrackAudio.pause();
+      this.soundtrackAudio.src = "";
+      this.soundtrackAudio.load();
+      this.soundtrackAudio = null;
+    }
     this.el.remove();
   }
 }

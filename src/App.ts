@@ -12,6 +12,8 @@ import type { ProfileData } from "./engine/types.ts";
 import { getAuthManager } from "./lib/convexClient.ts";
 
 const LOCAL_DEV_ID_KEY = "__tinyrealmsLocalDevId";
+const LOCAL_DEV_SIGNED_OUT_KEY = "__tinyrealmsLocalDevSignedOut";
+const LOCAL_DEV_AUTO_AUTH_FLAG = "VITE_LOCAL_DEV_AUTO_AUTH";
 
 export class App {
   private root: HTMLElement;
@@ -27,7 +29,7 @@ export class App {
   }
 
   async start() {
-    if (this.isLocalDev()) {
+    if (this.shouldStartLocalDev()) {
       await this.startLocalDev();
       return;
     }
@@ -41,8 +43,14 @@ export class App {
   private showAuthScreen() {
     this.clear();
     this.authScreen = new AuthScreen(
-      () => this.showProfileScreen(),
-      () => this.showGameAsGuest(),
+      () => {
+        this.clearLocalDevSignedOut();
+        this.showProfileScreen();
+      },
+      () => {
+        this.clearLocalDevSignedOut();
+        this.showGameAsGuest();
+      },
     );
     this.root.appendChild(this.authScreen.el);
   }
@@ -75,7 +83,14 @@ export class App {
     this.clear();
     this.profileScreen = new ProfileScreen(
       (profile) => this.showGame(profile),
-      () => this.start(),
+      () => {
+        if (this.isLocalDevAutoAuthEnabled()) {
+          this.markLocalDevSignedOut();
+          this.showAuthScreen();
+          return;
+        }
+        this.showAuthScreen();
+      },
     );
     this.root.appendChild(this.profileScreen.el);
   }
@@ -125,8 +140,17 @@ export class App {
     return (import.meta.env.VITE_CONVEX_URL as string)?.includes("127.0.0.1");
   }
 
+  private isLocalDevAutoAuthEnabled() {
+    return this.isLocalDev() && (import.meta.env[LOCAL_DEV_AUTO_AUTH_FLAG] as string) === "1";
+  }
+
+  private shouldStartLocalDev() {
+    return this.isLocalDevAutoAuthEnabled() && !this.isLocalDevSignedOut();
+  }
+
   private async startLocalDev() {
     try {
+      this.clearLocalDevSignedOut();
       const auth = getAuthManager();
       const alreadyValid =
         auth.isAuthenticated() && (await auth.validateSession());
@@ -162,5 +186,20 @@ export class App {
 
   private waitForAuth() {
     return new Promise((resolve) => setTimeout(resolve, 300));
+  }
+
+  private isLocalDevSignedOut() {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem(LOCAL_DEV_SIGNED_OUT_KEY) === "1";
+  }
+
+  private markLocalDevSignedOut() {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(LOCAL_DEV_SIGNED_OUT_KEY, "1");
+  }
+
+  private clearLocalDevSignedOut() {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.removeItem(LOCAL_DEV_SIGNED_OUT_KEY);
   }
 }

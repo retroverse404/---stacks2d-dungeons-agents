@@ -7,6 +7,7 @@ import { WorldItemLayer } from "./WorldItemLayer.ts";
 import { InputManager } from "./InputManager.ts";
 import { AudioManager } from "./AudioManager.ts";
 import { getConvexClient } from "../lib/convexClient.ts";
+import { X402RequestError, resolveX402Url, x402Fetch } from "../lib/x402.ts";
 import { api } from "../../convex/_generated/api";
 import type { AppMode, MapData, Portal, ProfileData, PresenceData } from "./types.ts";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -15,10 +16,86 @@ const PRESENCE_INTERVAL_MS = 250;   // how often to push position to Convex
 const SAVE_INTERVAL_MS = 30_000;   // how often to persist position to profile (was 10s)
 const PRESENCE_MOVE_THRESHOLD = 2; // px — skip presence update if player hasn't moved
 const DEFAULT_ITEM_PICKUP_SFX = "/assets/audio/take-item.mp3";
+const DEFAULT_MAP_MUSIC_VOLUME = 0.15;
+const COZY_CABIN_MUSIC_URL = "/assets/audio/Nardis%20%28Miles%20Davis%29%20HipHop%20Remix.mp3";
+const COZY_CABIN_MUSIC_VOLUME = 0.34;
 const BUILTIN_MAP_ALIASES: Record<string, string> = {
   "Cozy Cabin": "cozy-cabin",
   "cozy-cabin": "Cozy Cabin",
 };
+
+type SemanticInteractableMeta = {
+  tile?: { x: number; y: number };
+  trigger?: "proximity" | "interact" | "timed" | "payment-complete";
+  freeActions?: string[];
+  paidActions?: string[];
+  interactionPrompt?: string;
+  interactionSummary?: string;
+  eventBindings?: {
+    inspect?: string;
+    interact?: string;
+    paid?: string;
+  };
+  premiumOfferKey?: string;
+  itemDefName?: string;
+  roomLabel?: string;
+};
+
+type PremiumOfferMeta = {
+  objectKey?: string;
+  zoneKey?: string;
+  delivery?: string;
+  unlockEventType?: string;
+  unlockFactKey?: string;
+  resourceId?: string;
+};
+
+type PremiumOfferRecord = {
+  offerKey: string;
+  agentId: string;
+  title: string;
+  description: string;
+  provider: string;
+  priceAsset: string;
+  priceAmount: string;
+  network?: string;
+  endpointPath?: string;
+  status: string;
+  metadataJson?: string;
+};
+
+type SemanticInteractable = {
+  objectKey: string;
+  label: string;
+  objectType: string;
+  zoneKey?: string;
+  x?: number;
+  y?: number;
+  metadata: SemanticInteractableMeta;
+};
+
+function parseJsonObject<T>(json: string | undefined): T | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    return null;
+  }
+}
+
+function resolveOfferNetwork(network?: string): "mainnet" | "testnet" {
+  return network === "mainnet" || network === "stacks:1" ? "mainnet" : "testnet";
+}
+
+function formatOfferPrice(offer: PremiumOfferRecord) {
+  return `${offer.priceAmount} ${offer.priceAsset}`;
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "Unknown premium interaction error.";
+}
 
 /**
  * Main game class. Manages the PixiJS application, camera, map rendering,
@@ -62,6 +139,10 @@ export class Game {
 
   // Live world items subscription
   private worldItemsUnsub: (() => void) | null = null;
+  private semanticInteractables: SemanticInteractable[] = [];
+  private semanticPromptEl: HTMLDivElement | null = null;
+  private premiumPanelEl: HTMLDivElement | null = null;
+  private premiumInteractionPending = false;
 
   // Live NPC state subscription
   private npcStateUnsub: (() => void) | null = null;
@@ -175,7 +256,12 @@ export class Game {
   private static readonly STATIC_MAPS = ["cozy-cabin", "camineet", "mage-city", "palma"];
 
   private applyBuiltInMapFixups(mapData: MapData) {
-    if (mapData.name !== "Cozy Cabin") return;
+    const isCozyCabin = mapData.name === "Cozy Cabin" || mapData.id === "cozy-cabin";
+    if (!isCozyCabin) return;
+
+    // Keep the local Cozy Cabin soundtrack aligned even when the map has
+    // already been seeded into Convex with an older music URL.
+    mapData.musicUrl = COZY_CABIN_MUSIC_URL;
 
     // The bedroom passage on the east side of Cozy Cabin is visually open but
     // ships with blocked collision tiles in the saved map/static seed.
@@ -200,6 +286,41 @@ export class Game {
 
   private getBuiltInMapCandidates(mapName: string) {
     return Array.from(new Set([mapName, BUILTIN_MAP_ALIASES[mapName]].filter(Boolean))) as string[];
+  }
+
+  private isPlaceholderCozyCabinMap(saved: any) {
+    const normalizedName = String(saved?.name ?? "").toLowerCase();
+    const isCozyCabin =
+      normalizedName === "cozy cabin" || normalizedName === "cozy-cabin";
+    if (!isCozyCabin) return false;
+
+    // Emergency local-dev placeholder created during Convex recovery. It should
+    // never win over the authored static Cozy Cabin map.
+    return (
+      saved?.width === 40 &&
+      saved?.height === 30 &&
+      saved?.tileWidth === 32 &&
+      saved?.tileHeight === 32 &&
+      saved?.tilesetUrl === "/assets/tilesets/cozy-cabin.png" &&
+      Array.isArray(saved?.labels) &&
+      saved.labels.length === 0
+    );
+  }
+
+  private getMapMusicConfig(mapData: MapData) {
+    const isCozyCabin = mapData.name === "Cozy Cabin" || mapData.id === "cozy-cabin";
+    return {
+      url: mapData.musicUrl || "/assets/audio/cozy.m4a",
+      volume: isCozyCabin ? COZY_CABIN_MUSIC_VOLUME : DEFAULT_MAP_MUSIC_VOLUME,
+    };
+  }
+
+  private playMapMusic(mapData: MapData) {
+    const { url, volume } = this.getMapMusicConfig(mapData);
+    this.audio.volume = volume;
+    if (url) {
+      this.audio.loadAndPlay(url);
+    }
   }
 
   /**
@@ -239,6 +360,7 @@ export class Game {
   private async loadDefaultMap() {
     try {
       let mapData: MapData | null = null;
+      let loadedStaticMap = false;
 
       // Determine which map to load — use the profile's saved map, or default
       const targetMap = this.profile.mapName || "Cozy Cabin";
@@ -255,8 +377,14 @@ export class Game {
           if (saved) break;
         }
         if (saved) {
+          if (this.isPlaceholderCozyCabinMap(saved)) {
+            console.warn(
+              `[loadDefaultMap] ignoring placeholder Cozy Cabin map in Convex and falling back to static JSON`,
+            );
+          } else {
           console.log(`[loadDefaultMap] found "${saved.name}" in Convex (id: ${saved._id})`);
           mapData = this.convexMapToMapData(saved);
+          }
         } else {
           console.warn(`[loadDefaultMap] Convex returned null for "${targetMap}" — map not found by that name`);
         }
@@ -270,21 +398,31 @@ export class Game {
       // 2) Fall back to static JSON file
       if (!mapData) {
         for (const candidate of mapCandidates) {
-          const resp = await fetch(`/assets/maps/${candidate}.json`);
-          if (!resp.ok) continue;
+          try {
+            const resp = await fetch(`/assets/maps/${candidate}.json`);
+            if (!resp.ok) continue;
 
-          mapData = (await resp.json()) as MapData;
-          mapData.portals = mapData.portals ?? [];
-          console.warn(
-            `Loaded map "${candidate}" from static JSON (Convex missing/unavailable)`,
-          );
-          // Auto-seed to Convex (skip for guests)
-          if (!this.isGuest) {
-            this.seedMapToConvex(mapData).catch((e) =>
-              console.warn("Failed to seed map to Convex:", e),
+            const contentType = resp.headers.get("content-type") ?? "";
+            if (!contentType.includes("application/json")) {
+              console.warn(
+                `[loadDefaultMap] static candidate "${candidate}" returned non-JSON content (${contentType || "unknown"})`,
+              );
+              continue;
+            }
+
+            mapData = (await resp.json()) as MapData;
+            mapData.portals = mapData.portals ?? [];
+            loadedStaticMap = true;
+            console.warn(
+              `Loaded map "${candidate}" from static JSON (Convex missing/unavailable)`,
+            );
+            break;
+          } catch (staticErr) {
+            console.warn(
+              `[loadDefaultMap] failed to parse static map candidate "${candidate}":`,
+              staticErr,
             );
           }
-          break;
         }
 
         if (!mapData) {
@@ -296,8 +434,17 @@ export class Game {
       if (!mapData && targetMap !== "cozy-cabin") {
         const resp = await fetch("/assets/maps/cozy-cabin.json");
         if (resp.ok) {
-          mapData = (await resp.json()) as MapData;
-          console.warn(`Fell back to "cozy-cabin" static JSON`);
+          const contentType = resp.headers.get("content-type") ?? "";
+          if (contentType.includes("application/json")) {
+            mapData = (await resp.json()) as MapData;
+            mapData.portals = mapData.portals ?? [];
+            loadedStaticMap = true;
+            console.warn(`Fell back to "cozy-cabin" static JSON`);
+          } else {
+            console.warn(
+              `[loadDefaultMap] final cozy-cabin fallback returned non-JSON content (${contentType || "unknown"})`,
+            );
+          }
         } else {
           console.warn(
             `Static fallback map JSON not found (status ${resp.status})`,
@@ -308,6 +455,18 @@ export class Game {
       if (!mapData) {
         console.warn("No map could be loaded");
         return;
+      }
+
+      if (loadedStaticMap && !this.isGuest) {
+        try {
+          await this.seedMapToConvex(mapData);
+          if ((import.meta.env.VITE_CONVEX_URL as string)?.includes("127.0.0.1")) {
+            const convex = getConvexClient();
+            await convex.mutation((api as any).localDev.ensureDemoNpc, { mapName: mapData.name });
+          }
+        } catch (e) {
+          console.warn("Failed to reseed local static map state:", e);
+        }
       }
 
       this.applyBuiltInMapFixups(mapData);
@@ -367,6 +526,7 @@ export class Game {
       // Load and subscribe to world items
       await this.loadWorldItems(this.currentMapName);
       this.subscribeToWorldItems(this.currentMapName);
+      await this.loadSemanticInteractables(this.currentMapName);
 
       // Subscribe to server-authoritative NPC state
       await this.loadSpriteDefs();
@@ -383,10 +543,7 @@ export class Game {
       }
 
       // Start background music (use map's musicUrl, fallback to default)
-      const musicUrl = mapData!.musicUrl ?? "/assets/audio/cozy.m4a";
-      if (musicUrl) {
-        this.audio.loadAndPlay(musicUrl);
-      }
+      this.playMapMusic(mapData!);
     } catch (err) {
       console.warn("Failed to load default map:", err);
     }
@@ -436,6 +593,14 @@ export class Game {
 
   /** Current map data reference */
   currentMapData: MapData | null = null;
+
+  private clampCameraToCurrentMap() {
+    if (!this.currentMapData) return;
+
+    const worldW = this.currentMapData.width * this.currentMapData.tileWidth;
+    const worldH = this.currentMapData.height * this.currentMapData.tileHeight;
+    this.camera.clampToWorld(worldW, worldH);
+  }
 
   /**
    * Change to a different map. Handles unloading, loading, fade transition,
@@ -532,6 +697,7 @@ export class Game {
         return;
       }
 
+      this.applyBuiltInMapFixups(mapData);
       console.log(`[MapChange] step 6: loadMap (portals: ${(mapData.portals ?? []).length}, labels: ${(mapData.labels ?? []).length})`);
       await this.loadMap(mapData);
       this.currentMapName = mapData.name;
@@ -566,6 +732,7 @@ export class Game {
 
       await this.loadWorldItems(this.currentMapName);
       this.subscribeToWorldItems(this.currentMapName);
+      await this.loadSemanticInteractables(this.currentMapName);
 
       await this.loadSpriteDefs();
       this.subscribeToNpcState(this.currentMapName);
@@ -581,8 +748,7 @@ export class Game {
       }
 
       // 10) Switch music if the new map has a different track
-      const newMusic = mapData.musicUrl ?? "/assets/audio/cozy.m4a";
-      this.audio.loadAndPlay(newMusic);
+      this.playMapMusic(mapData);
 
       // 11) Notify editor / chat of map change
       this.onMapChanged?.(this.currentMapName);
@@ -718,11 +884,13 @@ export class Game {
         } else {
           this.handleObjectToggle();
         }
+        this.handleSemanticInteraction();
       }
     }
 
     // In build mode, still update world items for visual feedback (but no pickup)
     if (this.mode === "build") {
+      this.hideSemanticPrompt();
       this.worldItemLayer.update(dt, -9999, -9999); // no proximity in build mode
     }
 
@@ -732,12 +900,10 @@ export class Game {
       this.entityLayer.playerY,
     );
 
-    // Apply camera transform
+    // Update camera follow target first.
     this.camera.update();
-    this.app.stage.x = -this.camera.x + this.camera.viewportW / 2;
-    this.app.stage.y = -this.camera.y + this.camera.viewportH / 2;
 
-    // In build mode, allow panning with keyboard
+    // In build mode, allow panning with keyboard.
     if (this.mode === "build") {
       const panSpeed = 300;
       if (this.input.isDown("ArrowLeft") || this.input.isDown("a")) {
@@ -753,6 +919,12 @@ export class Game {
         this.camera.y += panSpeed * dt;
       }
     }
+
+    this.clampCameraToCurrentMap();
+
+    // Apply the final camera transform after follow, pan, and clamping.
+    this.app.stage.x = -this.camera.x + this.camera.viewportW / 2;
+    this.app.stage.y = -this.camera.y + this.camera.viewportH / 2;
 
     // Clear just-pressed keys at the very end of the frame, so all systems
     // (entity movement, NPC dialogue, toggle, pickup) can read them first.
@@ -1181,6 +1353,38 @@ export class Game {
     }
   }
 
+  private async loadSemanticInteractables(mapName: string) {
+    try {
+      this.hideSemanticPrompt();
+      const convex = getConvexClient();
+      const objects = await convex.query(api.semantics.listObjects, { mapName });
+      this.semanticInteractables = (objects ?? [])
+        .filter((object: any) => typeof object.x === "number" && typeof object.y === "number")
+        .map((object: any) => {
+          let metadata: SemanticInteractableMeta = {};
+          if (typeof object.metadataJson === "string" && object.metadataJson.length > 0) {
+            try {
+              metadata = JSON.parse(object.metadataJson);
+            } catch (error) {
+              console.warn(`[Semantics] Failed to parse metadata for ${object.objectKey}`, error);
+            }
+          }
+          return {
+            objectKey: object.objectKey,
+            label: object.label,
+            objectType: object.objectType,
+            zoneKey: object.zoneKey ?? undefined,
+            x: object.x ?? undefined,
+            y: object.y ?? undefined,
+            metadata,
+          } satisfies SemanticInteractable;
+        });
+    } catch (err) {
+      console.warn("Failed to load semantic interactables:", err);
+      this.semanticInteractables = [];
+    }
+  }
+
   private subscribeToWorldItems(mapName: string) {
     this.worldItemsUnsub?.();
     const convex = getConvexClient();
@@ -1276,6 +1480,397 @@ export class Game {
     this.pickingUp = false;
   }
 
+  private handleSemanticInteraction() {
+    if (this.premiumPanelEl) {
+      this.hideSemanticPrompt();
+      return;
+    }
+    if (this.entityLayer.inDialogue || this.entityLayer.hasNearbyNpc()) {
+      this.hideSemanticPrompt();
+      return;
+    }
+    if (this.objectLayer.getNearestToggleableId()) {
+      this.hideSemanticPrompt();
+      return;
+    }
+    if (this.worldItemLayer.getNearestItemId()) {
+      this.hideSemanticPrompt();
+      return;
+    }
+
+    let nearest: SemanticInteractable | null = null;
+    let nearestDist = 72;
+
+    for (const object of this.semanticInteractables) {
+      if (object.metadata.trigger !== "interact") continue;
+      if (typeof object.x !== "number" || typeof object.y !== "number") continue;
+      if (object.metadata.itemDefName) continue;
+
+      const dx = object.x - this.entityLayer.playerX;
+      const dy = object.y - this.entityLayer.playerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < nearestDist) {
+        nearest = object;
+        nearestDist = dist;
+      }
+    }
+
+    if (!nearest) {
+      this.hideSemanticPrompt();
+      return;
+    }
+
+    const freePrompt =
+      nearest.metadata.interactionPrompt ||
+      nearest.metadata.freeActions?.[1] ||
+      nearest.metadata.freeActions?.[0] ||
+      `Use ${nearest.label}`;
+    const premiumPrompt = nearest.metadata.paidActions?.[0];
+    this.showSemanticPrompt(
+      premiumPrompt && nearest.metadata.premiumOfferKey
+        ? `[E] ${freePrompt}   [X] ${premiumPrompt}`
+        : `[E] ${freePrompt}`,
+    );
+
+    if (
+      nearest.metadata.premiumOfferKey &&
+      nearest.metadata.paidActions?.length &&
+      (this.input.wasJustPressed("x") || this.input.wasJustPressed("X"))
+    ) {
+      void this.openPremiumInteractable(nearest);
+      return;
+    }
+
+    if (!(this.input.wasJustPressed("e") || this.input.wasJustPressed("E"))) {
+      return;
+    }
+
+    const eventType = nearest.metadata.eventBindings?.interact || "interact";
+    const summary =
+      nearest.metadata.interactionSummary ||
+      `${this.profile.name} interacted with ${nearest.label}.`;
+
+    void this.appendSemanticWorldEvent(nearest, eventType, summary);
+    this.showSemanticNotification(summary);
+  }
+
+  private async openPremiumInteractable(object: SemanticInteractable) {
+    if (this.premiumInteractionPending) return;
+
+    const offerKey = object.metadata.premiumOfferKey;
+    if (!offerKey) {
+      this.showSemanticNotification("No premium offer is configured for this interaction.");
+      return;
+    }
+
+    try {
+      const convex = getConvexClient();
+      const offer = await convex.query((api as any)["integrations/x402"].getOffer, {
+        offerKey,
+      }) as PremiumOfferRecord | null;
+
+      if (!offer || offer.status !== "active" || !offer.endpointPath) {
+        this.showSemanticNotification("This premium interaction is not active yet.");
+        return;
+      }
+
+      this.showPremiumInteractionPanel(object, offer);
+    } catch (error) {
+      console.warn("Premium interactable lookup failed:", error);
+      this.showSemanticNotification("Premium interaction lookup failed.");
+    }
+  }
+
+  private async appendSemanticWorldEvent(
+    object: SemanticInteractable,
+    eventType: string,
+    summary: string,
+    payload?: Record<string, unknown>,
+  ) {
+    try {
+      const convex = getConvexClient();
+      await convex.mutation(api.worldState.appendEvent, {
+        mapName: this.currentMapName,
+        worldId: this.currentMapName,
+        sourceType: "interactable",
+        sourceId: object.objectKey,
+        eventType,
+        actorId: this.profile.name,
+        objectKey: object.objectKey,
+        zoneKey: object.zoneKey,
+        tileX: object.metadata.tile?.x,
+        tileY: object.metadata.tile?.y,
+        summary,
+        payloadJson: JSON.stringify({
+          label: object.label,
+          objectType: object.objectType,
+          freeActions: object.metadata.freeActions ?? [],
+          premiumOfferKey: object.metadata.premiumOfferKey,
+          ...(payload ?? {}),
+        }),
+      });
+    } catch (err) {
+      console.warn("Semantic interaction event failed:", err);
+    }
+  }
+
+  private showPremiumInteractionPanel(object: SemanticInteractable, offer: PremiumOfferRecord) {
+    this.closePremiumInteractionPanel();
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(6,10,16,0.64);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10010;
+      padding: 20px;
+    `;
+
+    const card = document.createElement("div");
+    card.style.cssText = `
+      width: min(480px, calc(100vw - 32px));
+      background: linear-gradient(180deg, rgba(18,24,34,0.98), rgba(10,14,22,0.98));
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.36);
+      color: #f4f1de;
+      padding: 18px;
+      font-family: Inter, sans-serif;
+    `;
+
+    const eyebrow = document.createElement("div");
+    eyebrow.textContent = object.zoneKey ? `${object.zoneKey} premium interaction` : "Premium interaction";
+    eyebrow.style.cssText = `
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(244,225,160,0.72);
+      margin-bottom: 8px;
+    `;
+
+    const title = document.createElement("div");
+    title.textContent = `${object.label} • ${offer.title}`;
+    title.style.cssText = `
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #fff5d6;
+    `;
+
+    const description = document.createElement("div");
+    description.textContent = offer.description;
+    description.style.cssText = `
+      font-size: 14px;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.78);
+      margin-bottom: 12px;
+    `;
+
+    const actionLabel = object.metadata.paidActions?.[0] ?? "Unlock premium";
+    const details = document.createElement("div");
+    details.textContent = `${actionLabel} • ${formatOfferPrice(offer)} • ${resolveOfferNetwork(offer.network)}`;
+    details.style.cssText = `
+      font-size: 13px;
+      color: #f7e2a5;
+      margin-bottom: 12px;
+    `;
+
+    const status = document.createElement("div");
+    status.textContent = "Ready to request payment.";
+    status.style.cssText = `
+      font-size: 13px;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 10px;
+    `;
+
+    const body = document.createElement("div");
+    body.textContent = "Payment is part of this world interaction. Approve the wallet request only if you want the premium unlock.";
+    body.style.cssText = `
+      font-size: 14px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px;
+      min-height: 100px;
+      color: rgba(255,255,255,0.86);
+    `;
+
+    const buttonRow = document.createElement("div");
+    buttonRow.style.cssText = `
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
+    `;
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Close";
+    cancelBtn.style.cssText = `
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.04);
+      color: #f4f1de;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      cursor: pointer;
+    `;
+    cancelBtn.addEventListener("click", () => this.closePremiumInteractionPanel());
+
+    const confirmBtn = document.createElement("button");
+    confirmBtn.textContent = actionLabel;
+    confirmBtn.style.cssText = `
+      border: 1px solid rgba(248,202,88,0.48);
+      background: linear-gradient(180deg, #c48e22, #9f6a0f);
+      color: #1a1103;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    `;
+    confirmBtn.addEventListener("click", () => {
+      void this.runPremiumInteractableFlow(object, offer, {
+        status,
+        body,
+        confirmBtn,
+        cancelBtn,
+      });
+    });
+
+    buttonRow.append(cancelBtn, confirmBtn);
+    card.append(eyebrow, title, description, details, status, body, buttonRow);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    this.premiumPanelEl = overlay;
+  }
+
+  private closePremiumInteractionPanel() {
+    this.premiumPanelEl?.remove();
+    this.premiumPanelEl = null;
+    this.premiumInteractionPending = false;
+  }
+
+  private async runPremiumInteractableFlow(
+    object: SemanticInteractable,
+    offer: PremiumOfferRecord,
+    controls: {
+      status: HTMLDivElement;
+      body: HTMLDivElement;
+      confirmBtn: HTMLButtonElement;
+      cancelBtn: HTMLButtonElement;
+    },
+  ) {
+    if (this.premiumInteractionPending) return;
+    this.premiumInteractionPending = true;
+
+    controls.confirmBtn.disabled = true;
+    controls.cancelBtn.disabled = true;
+    controls.status.textContent = "Waiting for x402 challenge and wallet approval…";
+    controls.body.textContent =
+      "The game is requesting the premium payment flow from the mapped offer. If your wallet opens, approve the transaction to continue.";
+
+    const offerMeta = parseJsonObject<PremiumOfferMeta>(offer.metadataJson) ?? {};
+    const network = resolveOfferNetwork(offer.network);
+
+    try {
+      const result = await x402Fetch<Record<string, unknown>>(
+        resolveX402Url(offer.endpointPath || ""),
+        network,
+      );
+
+      const successEventType =
+        object.metadata.eventBindings?.paid ||
+        offerMeta.unlockEventType ||
+        "premium-unlocked";
+      const successSummary =
+        typeof result.summary === "string" && result.summary.trim().length > 0
+          ? result.summary
+          : `${this.profile.name} unlocked premium content from ${object.label}.`;
+
+      await this.appendSemanticWorldEvent(object, successEventType, successSummary, {
+        offerKey: offer.offerKey,
+        delivery: offerMeta.delivery,
+        agentId: offer.agentId,
+        result,
+      });
+
+      if (offerMeta.unlockFactKey) {
+        const convex = getConvexClient();
+        await convex.mutation(api.worldState.upsertFact, {
+          mapName: this.currentMapName,
+          factKey: offerMeta.unlockFactKey,
+          factType: "access",
+          valueJson: JSON.stringify({
+            offerKey: offer.offerKey,
+            objectKey: object.objectKey,
+            unlockedAt: Date.now(),
+            result,
+          }),
+          scope: "player",
+          subjectId: this.profile.name,
+          source: "premium-interactable",
+        });
+      }
+
+      controls.status.textContent = "Premium unlock complete.";
+      controls.body.textContent = this.formatPremiumInteractionResult(result);
+      controls.confirmBtn.style.display = "none";
+      controls.cancelBtn.disabled = false;
+      this.showSemanticNotification(successSummary);
+    } catch (error) {
+      console.warn("Premium interactable flow failed:", error);
+      controls.status.textContent = "Premium unlock failed.";
+      controls.body.textContent =
+        error instanceof X402RequestError
+          ? `HTTP ${error.status}\n${typeof error.details === "string" ? error.details : JSON.stringify(error.details, null, 2)}`
+          : getErrorMessage(error);
+      controls.confirmBtn.disabled = false;
+      controls.cancelBtn.disabled = false;
+      controls.confirmBtn.textContent = "Try again";
+    } finally {
+      this.premiumInteractionPending = false;
+    }
+  }
+
+  private formatPremiumInteractionResult(result: Record<string, unknown>) {
+    const lines: string[] = [];
+
+    if (typeof result.title === "string") lines.push(result.title);
+    if (typeof result.summary === "string") lines.push(result.summary);
+
+    if (Array.isArray(result.sections)) {
+      for (const section of result.sections) {
+        if (!section || typeof section !== "object") continue;
+        const heading =
+          typeof (section as { heading?: unknown }).heading === "string"
+            ? (section as { heading: string }).heading
+            : null;
+        const body =
+          typeof (section as { body?: unknown }).body === "string"
+            ? (section as { body: string }).body
+            : null;
+        if (heading) lines.push(`${heading}\n${body ?? ""}`.trim());
+      }
+    }
+
+    const grantAccessTxid =
+      typeof result.grantAccessTxid === "string" ? result.grantAccessTxid : null;
+    if (grantAccessTxid) {
+      lines.push(`Grant access tx: ${grantAccessTxid}`);
+    }
+
+    if (lines.length === 0) {
+      lines.push("Premium content delivered.");
+    }
+
+    return lines.join("\n\n");
+  }
+
   /** Show a brief floating text notification for item pickup */
   private showPickupNotification(text: string) {
     const div = document.createElement("div");
@@ -1298,6 +1893,65 @@ export class Game {
     `;
     document.body.appendChild(div);
     setTimeout(() => div.remove(), 1600);
+  }
+
+  private showSemanticNotification(text: string) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    div.style.cssText = `
+      position: fixed;
+      top: 92px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10,16,24,0.88);
+      color: #f7e2a5;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 16px;
+      line-height: 1.45;
+      max-width: min(520px, calc(100vw - 32px));
+      text-align: center;
+      white-space: pre-wrap;
+      font-family: Inter, sans-serif;
+      font-weight: 600;
+      z-index: 9999;
+      pointer-events: none;
+      animation: pickupFadeUp 1.5s ease-out forwards;
+    `;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 2200);
+  }
+
+  private showSemanticPrompt(text: string) {
+    if (!this.semanticPromptEl) {
+      this.semanticPromptEl = document.createElement("div");
+      this.semanticPromptEl.style.cssText = `
+        position: fixed;
+        left: 50%;
+        bottom: 84px;
+        transform: translateX(-50%);
+        background: rgba(8,12,18,0.86);
+        color: #f4f1de;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 999px;
+        padding: 9px 16px;
+        font-size: 14px;
+        font-family: Inter, sans-serif;
+        font-weight: 600;
+        z-index: 9998;
+        pointer-events: none;
+        box-shadow: 0 8px 22px rgba(0,0,0,0.28);
+      `;
+      document.body.appendChild(this.semanticPromptEl);
+    }
+    this.semanticPromptEl.textContent = text;
+    this.semanticPromptEl.style.display = "block";
+  }
+
+  private hideSemanticPrompt() {
+    if (this.semanticPromptEl) {
+      this.semanticPromptEl.style.display = "none";
+    }
   }
 
   // ===========================================================================
@@ -1359,6 +2013,10 @@ export class Game {
       document.removeEventListener("click", this.unlockHandler);
       document.removeEventListener("keydown", this.unlockHandler);
     }
+    this.premiumPanelEl?.remove();
+    this.premiumPanelEl = null;
+    this.semanticPromptEl?.remove();
+    this.semanticPromptEl = null;
     this.audio.destroy();
     this.resizeObserver?.disconnect();
     this.input.destroy();

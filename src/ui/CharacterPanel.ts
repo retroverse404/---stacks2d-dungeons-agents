@@ -7,6 +7,7 @@ import { api } from "../../convex/_generated/api";
 import type { Game } from "../engine/Game.ts";
 import type { ProfileData } from "../engine/types.ts";
 import type { Id } from "../../convex/_generated/dataModel";
+import { IconCharacter } from "../lib/icons.ts";
 import "./CharacterPanel.css";
 
 /** XP required for a given level (simple curve) */
@@ -53,7 +54,7 @@ export class CharacterPanel {
     this.toggleBtn = document.createElement("button");
     this.toggleBtn.className = "char-toggle";
     this.toggleBtn.title = "Character";
-    this.toggleBtn.textContent = "\u{1F9D1}"; // 🧑
+    this.toggleBtn.innerHTML = IconCharacter;
     this.toggleBtn.addEventListener("click", () => this.open());
     this.el.appendChild(this.toggleBtn);
 

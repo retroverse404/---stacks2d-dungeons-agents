@@ -7,6 +7,15 @@ import { api } from "../../convex/_generated/api";
 import "./HUD.css";
 
 const teneroApi: any = (api as any)["integrations/tenero"];
+const TICKER_REFRESH_MAX_AGE_MS = 5 * 60 * 1000;
+
+function formatAgeLabel(ageMs?: number | null) {
+  if (typeof ageMs !== "number" || !Number.isFinite(ageMs) || ageMs < 0) return "";
+  const minutes = Math.floor(ageMs / 60000);
+  if (minutes <= 0) return "just now";
+  if (minutes === 1) return "1 min ago";
+  return `${minutes} min ago`;
+}
 
 export class HUD {
   readonly el: HTMLElement;
@@ -59,6 +68,13 @@ export class HUD {
       return;
     }
     const convex = getConvexClient();
+    if (teneroApi?.refreshTickerIfStale) {
+      void convex
+        .action(teneroApi.refreshTickerIfStale, { maxAgeMs: TICKER_REFRESH_MAX_AGE_MS })
+        .catch((error: unknown) => {
+          console.warn("[HUD] Tenero ticker refresh failed", error);
+        });
+    }
     this.unsub = convex.onUpdate(teneroApi.tickerRows, {}, (payload: any) => {
       const items = Array.isArray(payload?.items) ? payload.items : [];
       const repeated = items.length > 0 ? [...items, ...items] : [];
@@ -88,10 +104,14 @@ export class HUD {
         }
       }
 
-      this.tickerSource.textContent =
-        payload?.source === "tenero"
-          ? "Tenero market feed"
-          : "Stacks market preview";
+      const ageLabel = formatAgeLabel(payload?.ageMs);
+      if (payload?.source === "tenero") {
+        this.tickerSource.textContent = payload?.isStale
+          ? `Tenero market feed • stale${ageLabel ? ` (${ageLabel})` : ""}`
+          : `Tenero market feed${ageLabel ? ` • ${ageLabel}` : ""}`;
+      } else {
+        this.tickerSource.textContent = "Stacks market preview";
+      }
     });
   }
 

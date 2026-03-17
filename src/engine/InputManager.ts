@@ -14,6 +14,8 @@ export class InputManager {
   private onMouseMove: (e: MouseEvent) => void;
   private onMouseDown: (e: MouseEvent) => void;
   private onMouseUp: (e: MouseEvent) => void;
+  private onWindowBlur: () => void;
+  private onVisibilityChange: () => void;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -50,8 +52,20 @@ export class InputManager {
       this.mouseDown = false;
     };
 
+    this.onWindowBlur = () => {
+      this.resetState();
+    };
+
+    this.onVisibilityChange = () => {
+      if (document.hidden) {
+        this.resetState();
+      }
+    };
+
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("blur", this.onWindowBlur);
+    document.addEventListener("visibilitychange", this.onVisibilityChange);
     canvas.addEventListener("mousemove", this.onMouseMove);
     canvas.addEventListener("mousedown", this.onMouseDown);
     canvas.addEventListener("mouseup", this.onMouseUp);
@@ -78,9 +92,17 @@ export class InputManager {
     this.justPressed.clear();
   }
 
+  private resetState() {
+    this.keys.clear();
+    this.justPressed.clear();
+    this.mouseDown = false;
+  }
+
   destroy() {
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("blur", this.onWindowBlur);
+    document.removeEventListener("visibilitychange", this.onVisibilityChange);
     this.canvas.removeEventListener("mousemove", this.onMouseMove);
     this.canvas.removeEventListener("mousedown", this.onMouseDown);
     this.canvas.removeEventListener("mouseup", this.onMouseUp);

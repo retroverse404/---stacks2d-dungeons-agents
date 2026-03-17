@@ -1,0 +1,179 @@
+.mel-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 7, 6, 0.72);
+  backdrop-filter: blur(12px);
+  z-index: 1400;
+}
+
+.mel-card {
+  width: min(720px, 100%);
+  max-height: min(86vh, 780px);
+  overflow: auto;
+  border: 1px solid rgba(89, 87, 84, 0.72);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(26, 24, 28, 0.96), rgba(16, 15, 18, 0.98));
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.42);
+  color: #f3f2f0;
+}
+
+.mel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid rgba(89, 87, 84, 0.32);
+}
+
+.mel-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(196, 168, 220, 0.7);
+  margin-bottom: 4px;
+}
+
+.mel-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #f3f2f0;
+}
+
+.mel-subtitle {
+  font-size: 13px;
+  color: rgba(243, 242, 240, 0.58);
+  line-height: 1.45;
+}
+
+.mel-close {
+  background: transparent;
+  border: 1px solid rgba(89, 87, 84, 0.5);
+  border-radius: 8px;
+  padding: 6px 14px;
+  color: rgba(243, 242, 240, 0.65);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mel-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mel-topic-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 18px 24px 0;
+}
+
+.mel-topic-btn {
+  background: rgba(196, 168, 220, 0.1);
+  border: 1px solid rgba(196, 168, 220, 0.28);
+  border-radius: 20px;
+  padding: 7px 16px;
+  color: #d4b8e8;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mel-topic-btn:hover {
+  background: rgba(196, 168, 220, 0.2);
+}
+
+.mel-response-area {
+  padding: 16px 24px;
+}
+
+.mel-response-text {
+  min-height: 60px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(89, 87, 84, 0.3);
+  border-radius: 12px;
+  font-size: 14px;
+  color: rgba(243, 242, 240, 0.88);
+  line-height: 1.6;
+}
+
+.mel-response-text.is-loading {
+  color: rgba(243, 242, 240, 0.45);
+  font-style: italic;
+}
+
+.mel-divider {
+  margin: 0 24px;
+  border: none;
+  border-top: 1px solid rgba(89, 87, 84, 0.38);
+}
+
+.mel-ask-section {
+  padding: 18px 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mel-ask-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(243, 242, 240, 0.55);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.mel-ask-row {
+  display: flex;
+  gap: 10px;
+}
+
+.mel-ask-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(89, 87, 84, 0.5);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #f3f2f0;
+  font-size: 14px;
+  outline: none;
+}
+
+.mel-ask-input:focus {
+  border-color: rgba(196, 168, 220, 0.5);
+}
+
+.mel-ask-btn {
+  background: rgba(196, 168, 220, 0.15);
+  border: 1px solid rgba(196, 168, 220, 0.35);
+  border-radius: 10px;
+  padding: 10px 20px;
+  color: #d4b8e8;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mel-ask-btn:hover:not(:disabled) {
+  background: rgba(196, 168, 220, 0.26);
+}
+
+.mel-ask-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mel-footer {
+  padding: 16px 24px 24px;
+  color: rgba(243, 242, 240, 0.45);
+  font-size: 12px;
+  line-height: 1.5;
+}

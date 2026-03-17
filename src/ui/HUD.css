@@ -4,9 +4,9 @@
 
 .hud {
   position: absolute;
-  top: 12px;
-  left: 84px;
-  right: 60px;
+  top: 64px;
+  left: 12px;
+  right: 12px;
   z-index: 100;
   display: flex;
   align-items: center;
@@ -17,7 +17,7 @@
   padding: 7px 14px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -35,7 +35,7 @@
   padding: 7px 12px 8px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 18px;
   overflow: hidden;
 }
 
@@ -99,6 +99,7 @@
 
 @media (max-width: 600px) {
   .hud {
+    top: 60px;
     left: 12px;
     right: 12px;
     gap: 6px;

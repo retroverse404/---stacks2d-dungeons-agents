@@ -19,6 +19,8 @@ export class GameShell {
   readonly el: HTMLElement;
   private canvas: HTMLCanvasElement;
   private game: Game | null = null;
+  private ambientLightEl: HTMLDivElement | null = null;
+  private launchLightEl: HTMLDivElement | null = null;
   private mode: AppMode = "play";
   private profile: ProfileData;
   private debugPanel: HTMLElement | null = null;
@@ -46,6 +48,20 @@ export class GameShell {
     this.canvas.className = "game-canvas";
     this.el.appendChild(this.canvas);
 
+    this.ambientLightEl = document.createElement("div");
+    this.ambientLightEl.className = "game-ambient-light";
+    this.el.appendChild(this.ambientLightEl);
+
+    this.launchLightEl = document.createElement("div");
+    this.launchLightEl.className = "game-launch-light";
+    this.el.appendChild(this.launchLightEl);
+
+    const sceneLogo = document.createElement("img");
+    sceneLogo.className = "game-scene-logo";
+    sceneLogo.src = "/assets/graphics-misc/logo-1a.png";
+    sceneLogo.alt = "Dungeons and Agents";
+    this.el.appendChild(sceneLogo);
+
     this.initEngine();
   }
 
@@ -54,6 +70,7 @@ export class GameShell {
       const game = new Game(this.canvas, this.profile);
       this.game = game;
       await game.init();
+      this.revealSceneLighting();
       this.buildUI();
     } catch (err) {
       console.error("Game initialization failed:", err);
@@ -61,6 +78,13 @@ export class GameShell {
         err instanceof Error ? err.message : "Failed to initialize game engine"
       );
     }
+  }
+
+  private revealSceneLighting() {
+    if (!this.launchLightEl) return;
+    window.setTimeout(() => {
+      this.launchLightEl?.classList.add("is-revealed");
+    }, 140);
   }
 
   private buildUI() {

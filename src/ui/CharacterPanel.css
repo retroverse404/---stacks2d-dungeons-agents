@@ -7,19 +7,21 @@
   z-index: 99;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  font-size: 18px;
+  border-radius: var(--radius-pill);
+  background: rgba(28, 26, 24, 0.80);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-strong);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
 .char-toggle:hover {
-  background: var(--bg-hover);
+  background: rgba(36, 34, 32, 0.90);
+  color: var(--text-primary);
 }
 
 /* ---- Character Panel ---- */
@@ -31,13 +33,15 @@
   z-index: 100;
   width: 320px;
   max-height: 540px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  background: rgba(18, 17, 15, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 /* ---- Header ---- */
@@ -53,7 +57,7 @@
 .char-sprite-box {
   width: 48px;
   height: 48px;
-  border-radius: var(--radius-sm);
+  border-radius: 12px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   display: flex;
@@ -88,19 +92,20 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 2px 6px;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   margin-left: 6px;
   vertical-align: middle;
 }
 
 .char-role-badge--admin {
-  background: rgba(108, 92, 231, 0.25);
-  color: #a29bfe;
+  background: rgba(252, 100, 50, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(252, 100, 50, 0.2);
 }
 
 .char-role-badge--player {
-  background: rgba(46, 204, 113, 0.2);
-  color: #2ecc71;
+  background: rgba(48, 164, 108, 0.15);
+  color: var(--success);
 }
 
 .char-level-row {
@@ -222,15 +227,15 @@
 }
 
 .char-stat-bar-fill--atk {
-  background: #e74c3c;
+  background: var(--danger);
 }
 
 .char-stat-bar-fill--def {
-  background: #3498db;
+  background: #5b9bd5;
 }
 
 .char-stat-bar-fill--spd {
-  background: #f39c12;
+  background: var(--warning);
 }
 
 .char-stat-value {
@@ -369,7 +374,7 @@
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 600;
-  background: #1a6b2a;
+  background: var(--success);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
@@ -378,7 +383,7 @@
 }
 
 .char-save-btn:hover {
-  background: #25923a;
+  opacity: 0.85;
 }
 
 .char-save-btn:disabled {

@@ -192,7 +192,7 @@ export class NPC {
       this.sprite.animationSpeed = ANIM_SPEED;
       this.sprite.anchor.set(0.5, 1);
       this.sprite.scale.set(this.scale);
-      this.sprite.gotoAndStop(0); // idle
+      this.sprite.gotoAndStop(0); // start on standing frame; server velocity drives animation
 
       // Remove fallback
       if (this.fallback) {
@@ -238,7 +238,7 @@ export class NPC {
     this.x += (predictedX - this.x) * blend;
     this.y += (predictedY - this.y) * blend;
 
-    // Update walk animation from server state
+    // Drive animation from server velocity: play when moving, stand when idle
     if (this.serverIsMoving && this.sprite && !this.sprite.playing) {
       this.sprite.play();
     } else if (!this.serverIsMoving && this.sprite?.playing) {

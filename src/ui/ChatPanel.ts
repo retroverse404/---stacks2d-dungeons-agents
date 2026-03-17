@@ -19,6 +19,46 @@ interface WorldEvent {
   timestamp: number;
 }
 
+interface LedgerRow {
+  agentId: string;
+  displayName: string;
+  roleKey: string;
+  walletAddress: string | null;
+  network: string;
+  permissionTier: string;
+  totalEarnedStx: number;
+  earningCount: number;
+  lastEarningAt: number | null;
+  lastEarningTxid: string | null;
+}
+
+interface LedgerEvent {
+  eventType: string;
+  summary: string;
+  timestamp: number;
+  actorId: string | null;
+  actorDisplayName?: string | null;
+  txid: string | null;
+  secondaryTxid: string | null;
+  amountStx: number | null;
+  resourceId: string | null;
+  objectKey: string | null;
+  zoneKey: string | null;
+}
+
+interface EconomySnapshot {
+  leaderboard: LedgerRow[];
+  totalEarnedStx: number;
+  recentEconomicEvents: LedgerEvent[];
+  totalEconomicEvents: number;
+}
+
+interface CastEntry {
+  registry?: { agentId: string; displayName?: string; roleKey?: string };
+  state?: { state?: string; mood?: string; currentIntent?: string };
+  binding?: { walletAddress?: string; network?: string };
+}
+
 export class ChatPanel {
   readonly el: HTMLElement;
   private isOpen = false;
@@ -26,10 +66,14 @@ export class ChatPanel {
   private panel: HTMLElement;
   private messagesEl: HTMLElement;
   private emptyEl: HTMLElement;
+  private rosterEl: HTMLElement;
+  private ledgerEl: HTMLElement;
+  private ledgerUnsub: (() => void) | null = null;
 
   private profile: ProfileData | null = null;
   private mapName: string | null = null;
   private unsub: (() => void) | null = null;
+  private rosterUnsub: (() => void) | null = null;
   private events: WorldEvent[] = [];
   private unreadCount = 0;
   private badgeEl: HTMLElement;
@@ -81,6 +125,14 @@ export class ChatPanel {
     header.append(headerCopy, closeBtn);
     this.panel.appendChild(header);
 
+    this.rosterEl = document.createElement("div");
+    this.rosterEl.className = "chat-roster";
+    this.panel.appendChild(this.rosterEl);
+
+    this.ledgerEl = document.createElement("div");
+    this.ledgerEl.className = "chat-ledger";
+    this.panel.appendChild(this.ledgerEl);
+
     this.messagesEl = document.createElement("div");
     this.messagesEl.className = "chat-messages";
     this.emptyEl = document.createElement("p");
@@ -106,6 +158,181 @@ export class ChatPanel {
     this.unreadCount = 0;
     this.updateBadge();
     this.subscribe();
+    this.subscribeRoster();
+    this.subscribeLedger();
+  }
+
+  private subscribeRoster() {
+    this.rosterUnsub?.();
+    const convex = getConvexClient();
+    const runtimeApi: any = (api as any)["agents/runtime"];
+    if (!runtimeApi?.listRuntimeCast) return;
+    this.rosterUnsub = convex.onUpdate(
+      runtimeApi.listRuntimeCast,
+      { mapName: this.mapName ?? undefined },
+      (cast: unknown) => this.renderRoster(cast as CastEntry[]),
+    );
+  }
+
+  private subscribeLedger() {
+    this.ledgerUnsub?.();
+    const convex = getConvexClient();
+    const economicsApi: any = (api as any)["agents/agentEconomics"];
+    if (!economicsApi?.getEconomySnapshot) return;
+    this.ledgerUnsub = convex.onUpdate(
+      economicsApi.getEconomySnapshot,
+      { mapName: this.mapName ?? undefined },
+      (snapshot: unknown) => this.renderLedger(snapshot as EconomySnapshot),
+    );
+  }
+
+  private renderLedger(snapshot: EconomySnapshot) {
+    this.ledgerEl.innerHTML = "";
+
+    const header = document.createElement("div");
+    header.className = "chat-ledger-header";
+
+    const title = document.createElement("div");
+    title.className = "chat-ledger-title";
+    title.textContent = "Agent Ledger";
+
+    const stats = document.createElement("div");
+    stats.className = "chat-ledger-stats";
+    stats.textContent = `${(snapshot?.totalEarnedStx ?? 0).toFixed(4)} STX tracked`;
+
+    header.append(title, stats);
+    this.ledgerEl.appendChild(header);
+
+    const leaderboard = snapshot?.leaderboard ?? [];
+    const ledgerEvents = snapshot?.recentEconomicEvents ?? [];
+
+    if (leaderboard.length === 0 && ledgerEvents.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "chat-ledger-empty";
+      empty.textContent = "No agent transactions yet.";
+      this.ledgerEl.appendChild(empty);
+      return;
+    }
+
+    const board = document.createElement("div");
+    board.className = "chat-ledger-board";
+    this.ledgerEl.appendChild(board);
+
+    for (const [index, row] of leaderboard.slice(0, 5).entries()) {
+      const entry = document.createElement("div");
+      entry.className = "chat-ledger-entry";
+
+      const rank = document.createElement("div");
+      rank.className = "chat-ledger-rank";
+      rank.textContent = `#${index + 1}`;
+
+      const body = document.createElement("div");
+      body.className = "chat-ledger-body";
+
+      const top = document.createElement("div");
+      top.className = "chat-ledger-top";
+
+      const name = document.createElement("span");
+      name.className = "chat-ledger-name";
+      name.textContent = row.displayName;
+
+      const amount = document.createElement("span");
+      amount.className = "chat-ledger-amount";
+      amount.textContent = `${row.totalEarnedStx.toFixed(4)} STX`;
+
+      top.append(name, amount);
+
+      const meta = document.createElement("div");
+      meta.className = "chat-ledger-meta";
+      meta.textContent = `${row.roleKey} · ${row.earningCount} payment${row.earningCount === 1 ? "" : "s"} · ${this.shortenAddress(row.walletAddress)}`;
+
+      body.append(top, meta);
+      entry.append(rank, body);
+      board.appendChild(entry);
+    }
+
+    if (ledgerEvents.length > 0) {
+      const recentLabel = document.createElement("div");
+      recentLabel.className = "chat-ledger-recent-label";
+      recentLabel.textContent = "Recent economic events";
+      this.ledgerEl.appendChild(recentLabel);
+
+      const recentList = document.createElement("div");
+      recentList.className = "chat-ledger-recent";
+      this.ledgerEl.appendChild(recentList);
+
+      for (const event of ledgerEvents.slice(0, 6)) {
+        const row = document.createElement("div");
+        row.className = "chat-ledger-event";
+
+        const top = document.createElement("div");
+        top.className = "chat-ledger-event-top";
+
+        const label = document.createElement("span");
+        label.className = "chat-ledger-event-type";
+        label.textContent = this.formatEventType(event.eventType);
+
+        const time = document.createElement("span");
+        time.className = "chat-ledger-event-time";
+        time.textContent = this.formatTime(event.timestamp);
+
+        top.append(label, time);
+
+        const summary = document.createElement("div");
+        summary.className = "chat-ledger-event-summary";
+        summary.textContent = event.summary;
+
+        const meta = document.createElement("div");
+        meta.className = "chat-ledger-event-meta";
+        const parts: string[] = [];
+        if (typeof event.amountStx === "number") {
+          parts.push(`${event.amountStx.toFixed(4)} STX`);
+        }
+        if (event.txid) {
+          parts.push(`tx ${this.shortenTxid(event.txid)}`);
+        }
+        if (event.secondaryTxid) {
+          parts.push(`pay ${this.shortenTxid(event.secondaryTxid)}`);
+        }
+        if (event.actorDisplayName) {
+          parts.push(String(event.actorDisplayName));
+        }
+        meta.textContent = parts.join(" · ");
+
+        row.append(top, summary, meta);
+        recentList.appendChild(row);
+      }
+    }
+  }
+
+  private renderRoster(cast: CastEntry[]) {
+    this.rosterEl.innerHTML = "";
+    if (!cast || cast.length === 0) return;
+
+    const label = document.createElement("div");
+    label.className = "chat-roster-label";
+    label.textContent = "Active agents";
+    this.rosterEl.appendChild(label);
+
+    const pills = document.createElement("div");
+    pills.className = "chat-roster-pills";
+    this.rosterEl.appendChild(pills);
+
+    for (const entry of cast) {
+      const pill = document.createElement("div");
+      pill.className = "chat-roster-pill";
+
+      const name = document.createElement("span");
+      name.className = "chat-roster-name";
+      name.textContent = entry.registry?.displayName ?? entry.registry?.agentId ?? "Agent";
+
+      const mood = document.createElement("span");
+      mood.className = "chat-roster-mood";
+      mood.textContent = entry.state?.mood ?? entry.state?.state ?? "active";
+
+      pill.append(name, mood);
+      pills.appendChild(pill);
+    }
   }
 
   private subscribe() {
@@ -216,6 +443,17 @@ export class ChatPanel {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
+  private shortenAddress(address: string | null | undefined): string {
+    if (!address) return "wallet pending";
+    if (address.length <= 14) return address;
+    return `${address.slice(0, 6)}…${address.slice(-4)}`;
+  }
+
+  private shortenTxid(txid: string): string {
+    if (txid.length <= 18) return txid;
+    return `${txid.slice(0, 10)}…${txid.slice(-8)}`;
+  }
+
   private dateKey(ts: number): string {
     const d = new Date(ts);
     const y = d.getFullYear();
@@ -270,6 +508,8 @@ export class ChatPanel {
 
   destroy() {
     this.unsub?.();
+    this.rosterUnsub?.();
+    this.ledgerUnsub?.();
     this.el.remove();
   }
 }
