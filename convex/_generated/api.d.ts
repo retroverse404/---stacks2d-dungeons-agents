@@ -22,6 +22,7 @@ import type * as integrations_tenero from "../integrations/tenero.js";
 import type * as integrations_x402 from "../integrations/x402.js";
 import type * as integrations_zeroAuthority from "../integrations/zeroAuthority.js";
 import type * as items from "../items.js";
+import type * as lib_agentCopy from "../lib/agentCopy.js";
 import type * as lib_getRequestUserId from "../lib/getRequestUserId.js";
 import type * as lib_requireAdmin from "../lib/requireAdmin.js";
 import type * as lib_requireAdminKey from "../lib/requireAdminKey.js";
@@ -77,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   "integrations/x402": typeof integrations_x402;
   "integrations/zeroAuthority": typeof integrations_zeroAuthority;
   items: typeof items;
+  "lib/agentCopy": typeof lib_agentCopy;
   "lib/getRequestUserId": typeof lib_getRequestUserId;
   "lib/requireAdmin": typeof lib_requireAdmin;
   "lib/requireAdminKey": typeof lib_requireAdminKey;

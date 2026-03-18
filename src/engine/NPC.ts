@@ -70,6 +70,7 @@ export class NPC {
   readonly id: string;
   readonly name: string;
   readonly container: Container;
+  readonly uiContainer: Container;
   readonly dialogue: DialogueLine[];
   interactSoundUrl?: string;
   ambientSoundUrl?: string;
@@ -92,6 +93,11 @@ export class NPC {
   private nameLabel: Text;
   private promptLabel: Text;
   private fallback: Graphics | null = null;
+  private speechBubble: Container | null = null;
+  private speechBubbleBg: Graphics | null = null;
+  private speechBubbleText: Text | null = null;
+  private speechExpiresAt = 0;
+  private promptLabelText = "[E] Talk";
 
   // Server-driven mode (position set externally, no local AI)
   readonly serverDriven: boolean;
@@ -135,35 +141,41 @@ export class NPC {
     this.container = new Container();
     this.container.x = this.x;
     this.container.y = this.y;
+    this.uiContainer = new Container();
+    this.uiContainer.x = this.x;
+    this.uiContainer.y = this.y;
+    this.uiContainer.label = `${this.id}-world-ui`;
 
     // Name label
     this.nameLabel = new Text({
       text: this.name,
       style: new TextStyle({
-        fontSize: 10,
+        fontSize: 14,
         fill: 0xffd700, // gold for NPCs
         fontFamily: "Inter, sans-serif",
         fontWeight: "bold",
+        stroke: { color: 0x000000, width: 3 },
       }),
     });
     this.nameLabel.anchor.set(0.5, 1);
     this.nameLabel.y = -26;
-    this.container.addChild(this.nameLabel);
+    this.uiContainer.addChild(this.nameLabel);
 
     // Interaction prompt (hidden by default)
     this.promptLabel = new Text({
-      text: "[E] Talk",
+      text: this.promptLabelText,
       style: new TextStyle({
-        fontSize: 9,
+        fontSize: 13,
         fill: 0xffffff,
         fontFamily: "Inter, sans-serif",
-        stroke: { color: 0x000000, width: 2 },
+        fontWeight: "700",
+        stroke: { color: 0x000000, width: 3 },
       }),
     });
     this.promptLabel.anchor.set(0.5, 1);
-    this.promptLabel.y = -38;
+    this.promptLabel.y = -42;
     this.promptLabel.visible = false;
-    this.container.addChild(this.promptLabel);
+    this.uiContainer.addChild(this.promptLabel);
 
     // Fallback square until sprite loads
     this.fallback = new Graphics();
@@ -192,7 +204,7 @@ export class NPC {
       this.sprite.animationSpeed = ANIM_SPEED;
       this.sprite.anchor.set(0.5, 1);
       this.sprite.scale.set(this.scale);
-      this.sprite.gotoAndStop(0); // start on standing frame; server velocity drives animation
+      this.sprite.gotoAndStop(Math.min(1, Math.max(0, this.sprite.totalFrames - 1))); // use the same idle frame convention as the player
 
       // Remove fallback
       if (this.fallback) {
@@ -206,6 +218,7 @@ export class NPC {
       // Reposition labels for sprite height
       this.nameLabel.y = -48 * this.scale - 2;
       this.promptLabel.y = -60 * this.scale - 2;
+      this.updateSpeechBubbleAnchor();
     } catch (err) {
       console.warn(`Failed to load NPC sprite: ${sheetPath}`, err);
     }
@@ -221,6 +234,12 @@ export class NPC {
 
     this.container.x = this.x;
     this.container.y = this.y;
+    this.uiContainer.x = this.x;
+    this.uiContainer.y = this.y;
+
+    if (this.speechBubble?.visible && this.speechExpiresAt > 0 && performance.now() >= this.speechExpiresAt) {
+      this.hideSpeech();
+    }
   }
 
   /** Server-driven: interpolate toward server position */
@@ -242,7 +261,7 @@ export class NPC {
     if (this.serverIsMoving && this.sprite && !this.sprite.playing) {
       this.sprite.play();
     } else if (!this.serverIsMoving && this.sprite?.playing) {
-      this.sprite.gotoAndStop(0);
+      this.sprite.gotoAndStop(Math.min(1, Math.max(0, this.sprite.totalFrames - 1)));
     }
   }
 
@@ -329,7 +348,13 @@ export class NPC {
       const frames = this.spritesheet.animations[animKey];
       if (frames && frames.length > 0) {
         this.sprite.textures = frames;
-        this.sprite.play();
+        const idleFrame = Math.min(1, Math.max(0, frames.length - 1));
+        const shouldWalk = this.serverDriven ? this.serverIsMoving : this.state === "walking";
+        if (shouldWalk) {
+          this.sprite.play();
+        } else {
+          this.sprite.gotoAndStop(idleFrame);
+        }
       }
     }
   }
@@ -342,7 +367,7 @@ export class NPC {
 
   private stopWalkAnim() {
     if (this.sprite) {
-      this.sprite.gotoAndStop(0);
+      this.sprite.gotoAndStop(Math.min(1, Math.max(0, this.sprite.totalFrames - 1)));
     }
   }
 
@@ -351,9 +376,18 @@ export class NPC {
     return Math.sqrt((this.x - px) ** 2 + (this.y - py) ** 2);
   }
 
-  /** Show/hide the "[E] Talk" prompt */
-  setPromptVisible(visible: boolean) {
+  setPromptText(text: string) {
+    const trimmed = text.trim();
+    this.promptLabelText = trimmed || "[E] Talk";
+    this.promptLabel.text = this.promptLabelText;
+  }
+
+  /** Show/hide the NPC interaction prompt */
+  setPromptVisible(visible: boolean, promptText?: string) {
     if (this._showPrompt === visible) return;
+    if (promptText) {
+      this.setPromptText(promptText);
+    }
     this._showPrompt = visible;
     this.promptLabel.visible = visible;
 
@@ -378,7 +412,76 @@ export class NPC {
     }
   }
 
+  showSpeech(text: string, durationMs = 10_000) {
+    const trimmed = text.replace(/\s+/g, " ").trim();
+    if (!trimmed) return;
+
+    this.ensureSpeechBubble();
+
+    const content = trimmed.length > 160 ? `${trimmed.slice(0, 159).trimEnd()}…` : trimmed;
+    this.speechBubbleText!.text = content;
+
+    const padX = 14;
+    const padY = 10;
+    const bubbleWidth = Math.max(140, Math.min(280, this.speechBubbleText!.width + padX * 2));
+    const bubbleHeight = Math.max(42, this.speechBubbleText!.height + padY * 2);
+
+    this.speechBubbleBg!.clear();
+    const bubbleRadius = Math.min(28, bubbleHeight / 2);
+    this.speechBubbleBg!.roundRect(-bubbleWidth / 2, -bubbleHeight, bubbleWidth, bubbleHeight, bubbleRadius);
+    this.speechBubbleBg!.fill({ color: 0x0b1220, alpha: 0.76 });
+    this.speechBubbleBg!.stroke({ color: 0xf4f1de, alpha: 0.14, width: 1.25 });
+
+    this.speechBubbleText!.x = 0;
+    this.speechBubbleText!.y = -bubbleHeight / 2;
+    this.speechBubble!.visible = true;
+    this.speechExpiresAt = performance.now() + durationMs;
+  }
+
+  hideSpeech() {
+    this.speechExpiresAt = 0;
+    if (this.speechBubble) {
+      this.speechBubble.visible = false;
+    }
+  }
+
+  private ensureSpeechBubble() {
+    if (this.speechBubble) return;
+
+    this.speechBubble = new Container();
+    this.speechBubble.visible = false;
+
+    this.speechBubbleBg = new Graphics();
+    this.speechBubble.addChild(this.speechBubbleBg);
+
+    this.speechBubbleText = new Text({
+      text: "",
+      style: new TextStyle({
+        fontSize: 14,
+        fill: 0xf4f1de,
+        fontFamily: "Inter, sans-serif",
+        align: "center",
+        wordWrap: true,
+        wordWrapWidth: 248,
+        lineHeight: 20,
+        stroke: { color: 0x000000, width: 2 },
+      }),
+    });
+    this.speechBubbleText.anchor.set(0.5);
+    this.speechBubble.addChild(this.speechBubbleText);
+
+    this.uiContainer.addChild(this.speechBubble);
+    this.updateSpeechBubbleAnchor();
+  }
+
+  private updateSpeechBubbleAnchor() {
+    if (!this.speechBubble) return;
+    this.speechBubble.x = 0;
+    this.speechBubble.y = this.promptLabel.y - 18;
+  }
+
   destroy() {
+    this.uiContainer.destroy({ children: true });
     this.container.destroy({ children: true });
   }
 }

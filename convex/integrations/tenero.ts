@@ -14,12 +14,13 @@ type TickerRow = {
   change24h: number;
 };
 
-const CURATED_TICKER_SYMBOLS = new Set(["STX", "SBTC", "USDCX", "LEO", "WELSH"]);
+const CURATED_TICKER_ORDER = ["STX", "SBTC", "USDCX", "LEO", "WELSH"] as const;
+const CURATED_TICKER_SYMBOLS: ReadonlySet<string> = new Set(CURATED_TICKER_ORDER);
 
 const FALLBACK_TICKER: TickerRow[] = [
   { symbol: "STX", price: 2.61, change24h: 4.8 },
-  { symbol: "sBTC", price: 103420, change24h: 1.2 },
-  { symbol: "USDCx", price: 1.0, change24h: 0.0 },
+  { symbol: "SBTC", price: 103420, change24h: 1.2 },
+  { symbol: "USDCX", price: 1.0, change24h: 0.0 },
   { symbol: "LEO", price: 0.18, change24h: 6.4 },
   { symbol: "WELSH", price: 0.00042, change24h: -2.1 },
 ];
@@ -34,6 +35,29 @@ function buildUrl(path: string) {
   return new URL(path.replace(/^\//, ""), `${getBaseUrl()}/`).toString();
 }
 
+function coerceNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function firstFiniteNumber(...values: unknown[]): number {
+  for (const value of values) {
+    const parsed = coerceNumber(value);
+    if (parsed !== null) return parsed;
+  }
+  return NaN;
+}
+
+function formatTickerSymbol(symbol: string) {
+  if (symbol === "SBTC") return "sBTC";
+  if (symbol === "USDCX") return "USDCx";
+  return symbol;
+}
+
 function normalizeTickerRow(input: any): TickerRow | null {
   const symbol = typeof input?.symbol === "string"
     ? input.symbol
@@ -42,32 +66,27 @@ function normalizeTickerRow(input: any): TickerRow | null {
       : typeof input?.asset === "string"
         ? input.asset
         : null;
-  const priceValue =
-    typeof input?.price === "number" ? input.price :
-    typeof input?.price === "string" ? Number(input.price) :
-    typeof input?.lastPrice === "number" ? input.lastPrice :
-    typeof input?.lastPrice === "string" ? Number(input.lastPrice) :
-    typeof input?.price_usd === "number" ? input.price_usd :
-    typeof input?.price_usd === "string" ? Number(input.price_usd) :
-    typeof input?.current_price === "number" ? input.current_price :
-    typeof input?.current_price === "string" ? Number(input.current_price) :
-    typeof input?.value === "number" ? input.value :
-    typeof input?.value === "string" ? Number(input.value) :
-    NaN;
-  const changeValue =
-    typeof input?.change24h === "number" ? input.change24h :
-    typeof input?.change24h === "string" ? Number(input.change24h) :
-    typeof input?.changePercent24h === "number" ? input.changePercent24h :
-    typeof input?.changePercent24h === "string" ? Number(input.changePercent24h) :
-    typeof input?.percentChange24h === "number" ? input.percentChange24h :
-    typeof input?.percentChange24h === "string" ? Number(input.percentChange24h) :
-    typeof input?.price?.price_change_1d_pct === "number" ? input.price.price_change_1d_pct :
-    typeof input?.price?.price_change_1d_pct === "string" ? Number(input.price.price_change_1d_pct) :
-    0;
+  const normalizedSymbol = symbol ? symbol.toUpperCase() : null;
+  const priceValue = firstFiniteNumber(
+    input?.price?.current_price,
+    input?.price?.price_usd,
+    input?.price,
+    input?.lastPrice,
+    input?.current_price,
+    input?.price_usd,
+    input?.value,
+  );
+  const changeValue = firstFiniteNumber(
+    input?.price?.price_change_1d_pct,
+    input?.change24h,
+    input?.changePercent24h,
+    input?.percentChange24h,
+    0,
+  );
 
-  if (!symbol || !Number.isFinite(priceValue)) return null;
+  if (!normalizedSymbol || !Number.isFinite(priceValue)) return null;
   return {
-    symbol: symbol.toUpperCase(),
+    symbol: normalizedSymbol,
     price: priceValue,
     change24h: Number.isFinite(changeValue) ? changeValue : 0,
   };
@@ -103,6 +122,14 @@ function formatPrice(symbol: string, price: number): string {
   if (price >= 1000) return price.toLocaleString(undefined, { maximumFractionDigits: 0 });
   if (price >= 1) return price.toFixed(2);
   return price.toFixed(4);
+}
+
+function mergeCuratedTickerRows(rows: TickerRow[]) {
+  const liveRows = new Map(rows.map((row) => [row.symbol, row]));
+  const fallbackRows = new Map(FALLBACK_TICKER.map((row) => [row.symbol, row]));
+  return CURATED_TICKER_ORDER.map((symbol) => liveRows.get(symbol) ?? fallbackRows.get(symbol)).filter(
+    (row): row is TickerRow => !!row,
+  );
 }
 
 async function fetchAndStoreSnapshot(
@@ -234,7 +261,7 @@ export const tickerRows = query({
       .first();
 
     const rows = parseTickerRows(latest?.rawJson);
-    const sourceRows = rows.length > 0 ? rows : FALLBACK_TICKER;
+    const sourceRows = mergeCuratedTickerRows(rows);
     const ageMs = latest?.syncedAt ? Date.now() - latest.syncedAt : null;
     return {
       source: rows.length > 0 ? SOURCE : "fallback",
@@ -242,7 +269,7 @@ export const tickerRows = query({
       isStale: !latest || ageMs === null ? true : ageMs > DEFAULT_TICKER_MAX_AGE_MS,
       syncedAt: latest?.syncedAt ?? Date.now(),
       items: sourceRows.map((row) => ({
-        symbol: row.symbol,
+        symbol: formatTickerSymbol(row.symbol),
         price: row.price,
         priceLabel: formatPrice(row.symbol, row.price),
         change24h: row.change24h,

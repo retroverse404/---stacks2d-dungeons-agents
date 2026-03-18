@@ -25,8 +25,9 @@ import { api } from "../../convex/_generated/api";
 const MOVE_SPEED = 120; // pixels per second
 const SPRINT_MULTIPLIER = 1.5; // hold Shift to move faster
 const ANIM_SPEED = 0.12; // frames per tick (PixiJS AnimatedSprite)
-const NPC_INTERACT_RADIUS = 48; // pixels
+const NPC_INTERACT_RADIUS = 64; // pixels
 const CHARACTER_COLLISION_RADIUS = 18; // keep bodies from ghosting through each other
+const MAX_AGENT_CHATTER_CHARS = 160;
 // ---------------------------------------------------------------------------
 // Remote player interpolation
 // ---------------------------------------------------------------------------
@@ -62,6 +63,13 @@ type CharacterCollider = {
   y: number;
 };
 
+type AgentChatterEntry = {
+  id: string;
+  speaker: string;
+  summary: string;
+  replyToDisplayName?: string | null;
+};
+
 /** Maps our Direction to the villager sprite sheet row animations */
 const DIR_ANIM: Record<Direction, string> = {
   down: "row0",
@@ -75,6 +83,7 @@ const DIR_ANIM: Record<Direction, string> = {
  */
 export class EntityLayer {
   container: Container;
+  worldUiContainer: Container;
   private game: Game;
 
   // Local player
@@ -91,6 +100,7 @@ export class EntityLayer {
   private playerSprite: AnimatedSprite | null = null;
   private playerFallback: Graphics | null = null;
   private playerLabel: Text;
+  private playerLabelOffsetY = -10;
   private spritesheet: Spritesheet | null = null;
 
   // NPCs
@@ -98,6 +108,8 @@ export class EntityLayer {
   private nearestNPC: NPC | null = null;
   inDialogue = false;
   private npcAmbientHandles = new Map<string, import("./AudioManager.ts").SfxHandle>();
+  private seenChatterEventIds = new Set<string>();
+  private recentNpcGreetingAt = new Map<string, number>();
 
   // Remote players
   private remotePlayers: Map<
@@ -117,6 +129,7 @@ export class EntityLayer {
       direction: string;
       animation: string;
       directionHoldFrames: number; // frames the current direction has been consistent
+      labelOffsetY: number;
     }
   > = new Map();
 
@@ -125,6 +138,10 @@ export class EntityLayer {
     this.container = new Container();
     this.container.label = "entities";
     this.container.zIndex = 50;
+    this.worldUiContainer = new Container();
+    this.worldUiContainer.label = "world-ui";
+    this.worldUiContainer.zIndex = 70;
+    this.worldUiContainer.sortableChildren = true;
 
     // Create local player container
     this.playerContainer = new Container();
@@ -141,7 +158,9 @@ export class EntityLayer {
       }),
     });
     this.playerLabel.anchor.set(0.5, 1);
-    this.playerContainer.addChild(this.playerLabel);
+    this.playerLabel.x = this.playerX;
+    this.playerLabel.y = this.playerY + this.playerLabelOffsetY;
+    this.worldUiContainer.addChild(this.playerLabel);
 
     // Fallback square
     this.showFallback();
@@ -162,7 +181,7 @@ export class EntityLayer {
     this.playerFallback.rect(-size / 2, -size / 2, size, size);
     this.playerFallback.fill(0x6c5ce7);
     this.playerContainer.addChild(this.playerFallback);
-    this.playerLabel.y = -size / 2 - 2;
+    this.playerLabelOffsetY = -size / 2 - 2;
   }
 
   private async loadCharacterSprite() {
@@ -187,7 +206,7 @@ export class EntityLayer {
       }
 
       this.playerContainer.addChild(this.playerSprite);
-      this.playerLabel.y = -48 - 2;
+      this.playerLabelOffsetY = -48 - 2;
     } catch (err) {
       console.warn("Failed to load character sprite:", err);
     }
@@ -216,6 +235,7 @@ export class EntityLayer {
     const npc = new NPC(config);
     this.npcs.push(npc);
     this.container.addChild(npc.container);
+    this.worldUiContainer.addChild(npc.uiContainer);
 
     // Start ambient sound if defined
     if (npc.ambientSoundUrl) {
@@ -296,6 +316,7 @@ export class EntityLayer {
     for (const npc of toRemove) {
       this.removeNPC(npc.id);
     }
+    this.seenChatterEventIds.clear();
   }
 
   // ---------------------------------------------------------------------------
@@ -510,6 +531,7 @@ export class EntityLayer {
     if (idx >= 0) {
       const npc = this.npcs[idx];
       this.container.removeChild(npc.container);
+      this.worldUiContainer.removeChild(npc.uiContainer);
       npc.destroy();
       this.npcs.splice(idx, 1);
       // Stop ambient sound
@@ -519,6 +541,65 @@ export class EntityLayer {
         this.npcAmbientHandles.delete(id);
       }
     }
+  }
+
+  applyAgentChatter(entries: AgentChatterEntry[]) {
+    const unseen = entries.filter((entry) => !this.seenChatterEventIds.has(entry.id));
+    if (unseen.length === 0) return;
+
+    const entry = unseen[unseen.length - 1];
+    const npc = this.findNpcByName(entry.speaker);
+    if (!npc) return;
+
+    for (const other of this.npcs) {
+      if (other.id !== npc.id) other.hideSpeech();
+    }
+
+    const peer =
+      (entry.replyToDisplayName ? this.findNpcByName(entry.replyToDisplayName) : null) ??
+      this.findClosestPeer(npc);
+
+    if (peer) {
+      npc.faceToward(peer.x, peer.y);
+    }
+
+    const compactSummary = entry.summary.replace(/\s+/g, " ").trim();
+    const conciseSummary =
+      compactSummary.length > MAX_AGENT_CHATTER_CHARS
+        ? `${compactSummary.slice(0, MAX_AGENT_CHATTER_CHARS - 1).trimEnd()}…`
+        : compactSummary;
+
+    npc.showSpeech(conciseSummary, entry.replyToDisplayName ? 10_000 : 7_000);
+    for (const seen of unseen) {
+      this.seenChatterEventIds.add(seen.id);
+    }
+
+    if (this.seenChatterEventIds.size > 120) {
+      this.seenChatterEventIds = new Set(Array.from(this.seenChatterEventIds).slice(-60));
+    }
+  }
+
+  private findNpcByName(name: string | null | undefined) {
+    if (!name) return null;
+    return this.npcs.find((npc) => npc.name === name) ?? null;
+  }
+
+  private findClosestPeer(source: NPC) {
+    let nearest: NPC | null = null;
+    let nearestDist = Number.POSITIVE_INFINITY;
+
+    for (const npc of this.npcs) {
+      if (npc.id === source.id) continue;
+      const dx = npc.x - source.x;
+      const dy = npc.y - source.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < nearestDist) {
+        nearest = npc;
+        nearestDist = dist;
+      }
+    }
+
+    return nearest;
   }
 
   // ---------------------------------------------------------------------------
@@ -556,6 +637,8 @@ export class EntityLayer {
     // Update player visual position
     this.playerContainer.x = this.playerX;
     this.playerContainer.y = this.playerY;
+    this.playerLabel.x = this.playerX;
+    this.playerLabel.y = this.playerY + this.playerLabelOffsetY;
 
     // Camera follows the player during play, but build mode should allow free panning.
     if (this.game.mode === "build") {
@@ -623,6 +706,8 @@ export class EntityLayer {
 
       remote.container.x = remote.renderX;
       remote.container.y = remote.renderY;
+      remote.label.x = remote.renderX;
+      remote.label.y = remote.renderY + remote.labelOffsetY;
 
       // Debounce direction changes — only apply after 2 consistent frames
       // to prevent one-frame direction flickers from swapping sprites
@@ -862,6 +947,7 @@ export class EntityLayer {
     // Find nearest NPC within interact radius
     let nearest: NPC | null = null;
     let nearestDist = NPC_INTERACT_RADIUS;
+    const previousNearest = this.nearestNPC;
 
     for (const npc of this.npcs) {
       const dist = npc.distanceTo(this.playerX, this.playerY);
@@ -872,12 +958,16 @@ export class EntityLayer {
     }
 
     // Update prompt visibility
-    if (this.nearestNPC && this.nearestNPC !== nearest) {
-      this.nearestNPC.setPromptVisible(false);
+    if (previousNearest && previousNearest !== nearest) {
+      previousNearest.setPromptVisible(false);
     }
     this.nearestNPC = nearest;
     if (nearest) {
-      nearest.setPromptVisible(true);
+      nearest.setPromptVisible(true, "Press E to speak");
+    }
+
+    if (nearest && previousNearest !== nearest) {
+      this.maybeTriggerNpcGreeting(nearest);
     }
 
     // Guests are read-only, but dialogue is safe and should still work.
@@ -1025,6 +1115,41 @@ export class EntityLayer {
     });
   }
 
+  private maybeTriggerNpcGreeting(npc: NPC) {
+    const now = Date.now();
+    const lastAt = this.recentNpcGreetingAt.get(npc.id) ?? 0;
+    if (now - lastAt < 12_000) return;
+
+    npc.faceToward(this.playerX, this.playerY);
+    npc.showSpeech(this.getNpcGreetingLine(npc), 8_000);
+    this.recentNpcGreetingAt.set(npc.id, now);
+
+    void this.appendWorldEvent("npc-greeting", npc, {
+      summary: `${npc.name} notices ${this.profileLabel()} nearby.`,
+      detailsJson: JSON.stringify({
+        mode: "proximity",
+        prompt: "press-e-dialogue",
+      }),
+    });
+  }
+
+  private getNpcGreetingLine(npc: NPC) {
+    switch (npc.name) {
+      case "guide.btc":
+        return "New to Stacks? Press E and I’ll walk you through the room.";
+      case "market.btc":
+        return "Need the latest tape? Press E for the market board.";
+      case "quests.btc":
+        return "I’ve got fresh opportunities. Press E if you want the short list.";
+      case "Mel":
+        return "I’ve been curating signals all day. Press E and I’ll show you the good ones.";
+      case "Toma":
+        return "Pull up a chair. Press E if you want the tavern chatter.";
+      default:
+        return npc.dialogue[0]?.text?.trim() || "Press E to talk.";
+    }
+  }
+
   private profileLabel(): string {
     return this.game.profile?.name || "Player";
   }
@@ -1136,8 +1261,9 @@ export class EntityLayer {
           }),
         });
         label.anchor.set(0.5, 1);
-        label.y = -48 - 2;
-        remoteContainer.addChild(label);
+        label.x = p.x;
+        label.y = p.y - 48 - 2;
+        this.worldUiContainer.addChild(label);
 
         this.container.addChild(remoteContainer);
 
@@ -1153,6 +1279,7 @@ export class EntityLayer {
           direction: p.direction,
           animation: p.animation,
           directionHoldFrames: 0,
+          labelOffsetY: -48 - 2,
         };
         this.remotePlayers.set(p.profileId, remote);
 
@@ -1183,6 +1310,8 @@ export class EntityLayer {
     for (const [id, remote] of this.remotePlayers) {
       if (!activeIds.has(id)) {
         this.container.removeChild(remote.container);
+        this.worldUiContainer.removeChild(remote.label);
+        remote.label.destroy();
         remote.sprite?.destroy();
         this.remotePlayers.delete(id);
       }

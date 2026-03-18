@@ -46,6 +46,15 @@ const BOOKSHELF_PREMIUM_ACCESS: Omit<PremiumAccessGrantConfig, "payerPrincipal" 
   resourceId: "cozy-cabin-bookshelf-brief",
 };
 
+const DUAL_STACKING_VIDEO_PREMIUM_ACCESS: Omit<
+  PremiumAccessGrantConfig,
+  "payerPrincipal" | "paymentTxid"
+> = {
+  agentDisplayName: "guide.btc",
+  agentInstanceName: "guide-btc",
+  resourceId: "cozy-cabin-dual-stacking-video",
+};
+
 const MARKET_PREMIUM_ACCESS: Omit<PremiumAccessGrantConfig, "payerPrincipal" | "paymentTxid"> = {
   agentDisplayName: "market.btc",
   agentInstanceName: "market-btc",
@@ -250,6 +259,13 @@ if (!guideServerAddress) {
         "SERVER_ADDRESS is not set. Configure the x402 API before enabling paid bookshelf access.",
     });
   });
+  app.get("/api/premium/guide-btc/dual-stacking-video", (_req, res) => {
+    res.status(503).json({
+      error: "x402_api_not_configured",
+      message:
+        "SERVER_ADDRESS is not set. Configure the x402 API before enabling paid dual stacking video access.",
+    });
+  });
 } else {
   app.get(
     "/api/premium/guide-btc",
@@ -319,6 +335,46 @@ if (!guideServerAddress) {
                 "The study shelf points toward the phonograph corner, where lost recordings and wax-cylinder artifacts can become collectible premium moments.",
             },
           ],
+          network: networkName,
+          asset: "STX",
+          priceStx: guidePremiumPrice,
+          deliveredAt: Date.now(),
+          ...premiumAccess,
+        });
+      } catch (error) {
+        sendGrantAccessFailure(res, error);
+      }
+    },
+  );
+
+  app.get(
+    "/api/premium/guide-btc/dual-stacking-video",
+    paymentMiddleware({
+      amount: STXtoMicroSTX(guidePremiumPrice),
+      payTo: guideServerAddress,
+      network,
+      facilitatorUrl: resolvedFacilitatorUrl,
+      description: "Dual stacking on Bitcoin premium lesson",
+      tokenType: "STX",
+    }),
+    async (req, res) => {
+      try {
+        const premiumAccess = await finalizePremiumAccess(
+          req,
+          DUAL_STACKING_VIDEO_PREMIUM_ACCESS,
+          STXtoMicroSTX(guidePremiumPrice),
+        );
+        res.json({
+          title: "Dual Stacking on Bitcoin",
+          classification: "premium",
+          delivery: "video",
+          objectKey: "dual-stacking-screen",
+          zoneKey: "private-room",
+          summary:
+            "The east-room screen unlocks a paid lesson on dual stacking, with the video taking over cleanly while Cozy Cabin music pauses.",
+          videoTitle: "Dual Stacking on Bitcoin",
+          videoProvider: "youtube",
+          pauseWorldMusic: true,
           network: networkName,
           asset: "STX",
           priceStx: guidePremiumPrice,

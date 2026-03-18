@@ -25,12 +25,12 @@ export function createDialogueSplash(props: DialogueSplashProps): SplashScreen {
 
   const el = document.createElement("div");
   el.style.cssText =
-    "position:fixed;bottom:0;left:0;right:0;padding:24px;display:flex;justify-content:center;pointer-events:auto;";
+    "position:fixed;bottom:0;left:0;right:0;padding:32px;display:flex;justify-content:center;pointer-events:auto;";
 
   const card = document.createElement("div");
   card.style.cssText =
     "background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);" +
-    "padding:20px 28px;max-width:640px;width:100%;box-shadow:0 -4px 24px rgba(0,0,0,0.5);";
+    "padding:28px 32px;max-width:760px;width:100%;box-shadow:0 -4px 24px rgba(0,0,0,0.5);";
   el.appendChild(card);
 
   function render() {
@@ -42,7 +42,7 @@ export function createDialogueSplash(props: DialogueSplashProps): SplashScreen {
     const speaker = node.speaker ?? npcName;
     if (speaker) {
       const sp = document.createElement("div");
-      sp.style.cssText = "font-size:13px;font-weight:600;color:var(--accent);margin-bottom:8px;";
+      sp.style.cssText = "font-size:16px;font-weight:700;color:var(--accent);margin-bottom:10px;";
       sp.textContent = speaker;
       card.appendChild(sp);
     }
@@ -50,7 +50,7 @@ export function createDialogueSplash(props: DialogueSplashProps): SplashScreen {
     // Text
     const p = document.createElement("p");
     p.style.cssText =
-      `font-size:16px;line-height:1.5;color:var(--text-primary);margin-bottom:${node.responses ? "16px" : "8px"};`;
+      `font-size:19px;line-height:1.65;color:var(--text-primary);margin-bottom:${node.responses ? "20px" : "10px"};`;
     p.textContent = node.text;
     card.appendChild(p);
 
@@ -61,8 +61,8 @@ export function createDialogueSplash(props: DialogueSplashProps): SplashScreen {
       node.responses.forEach((resp, i) => {
         const btn = document.createElement("button");
         btn.style.cssText =
-          "padding:10px 16px;background:var(--bg-hover);border:1px solid var(--border);" +
-          "border-radius:var(--radius-sm);color:var(--text-primary);font-size:14px;text-align:left;cursor:pointer;";
+          "padding:13px 18px;background:var(--bg-hover);border:1px solid var(--border);" +
+          "border-radius:var(--radius-sm);color:var(--text-primary);font-size:16px;line-height:1.45;text-align:left;cursor:pointer;";
         btn.textContent = resp.text;
         btn.addEventListener("click", () => {
           onChoice?.(currentNodeId, i);
@@ -74,8 +74,8 @@ export function createDialogueSplash(props: DialogueSplashProps): SplashScreen {
     } else {
       const btn = document.createElement("button");
       btn.style.cssText =
-        "padding:8px 16px;background:var(--accent);border-radius:var(--radius-sm);" +
-        "color:white;font-size:13px;cursor:pointer;border:none;";
+        "padding:10px 18px;background:var(--accent);border-radius:var(--radius-sm);" +
+        "color:white;font-size:15px;font-weight:600;cursor:pointer;border:none;";
       btn.textContent = node.nextNodeId ? "Continue" : "Close";
       btn.addEventListener("click", () => advance(node.nextNodeId));
       card.appendChild(btn);

@@ -4,10 +4,16 @@
 
 .hud {
   position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.hud-top {
+  position: absolute;
   top: 64px;
   left: 12px;
   right: 12px;
-  z-index: 100;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -18,7 +24,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -59,7 +65,7 @@
   align-items: center;
   gap: 8px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .hud-ticker-symbol {
@@ -85,11 +91,45 @@
 }
 
 .hud-ticker-source {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
   font-family: var(--font-mono);
+}
+
+.hud-now-playing {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(540px, calc(100% - 24px));
+  padding: 8px 14px 9px;
+  border-radius: 999px;
+  background: rgba(10, 14, 20, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(12px);
+  text-align: center;
+}
+
+.hud-now-playing-label {
+  color: rgba(255, 212, 169, 0.76);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hud-now-playing-meta {
+  margin-top: 2px;
+  color: rgba(255, 244, 225, 0.84);
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @keyframes hud-ticker-scroll {
@@ -99,6 +139,10 @@
 
 @media (max-width: 600px) {
   .hud {
+    inset: 0;
+  }
+
+  .hud-top {
     top: 60px;
     left: 12px;
     right: 12px;
@@ -106,7 +150,7 @@
   }
 
   .hud-mode-label {
-    font-size: 9px;
+    font-size: 11px;
     padding: 6px 10px;
   }
 
@@ -115,7 +159,17 @@
   }
 
   .hud-ticker-item {
-    font-size: 11px;
+    font-size: 13px;
     gap: 6px;
+  }
+
+  .hud-now-playing {
+    bottom: 12px;
+    width: calc(100% - 20px);
+    padding: 7px 11px 8px;
+  }
+
+  .hud-now-playing-meta {
+    font-size: 12px;
   }
 }

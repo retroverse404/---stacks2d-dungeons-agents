@@ -32,6 +32,7 @@ It is an engineering status document, not a submission or positioning note.
 - Semantic objects with `premiumOfferKey`: bookshelf, phonograph
 - 10-minute agent epoch loop in `convex/agents/runtime.ts`
 - AI budget guardrails: per-agent cooldown and daily limit on Braintrust/model calls
+- Braintrust is currently used as the proxy/gateway for LLM calls; system prompts live in repo code, not in a hosted Braintrust prompt registry
 
 ## Verified Payment Flows
 

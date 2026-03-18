@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { action } from "../_generated/server";
 import { api } from "../_generated/api";
+import { MAX_AGENT_LINE_CHARS, normalizeShortAgentLine } from "../lib/agentCopy";
 
 // Braintrust AI Proxy for LLM-assisted narrative generation
 // Uses the Braintrust proxy endpoint for chat completions
@@ -74,6 +75,12 @@ export const generateDialogue = action({
 
     const messages: any[] = [
       { role: "system", content: trimText(systemPrompt, maxInputChars * 2) },
+      {
+        role: "system",
+        content:
+          `Reply in a single sentence under ${MAX_AGENT_LINE_CHARS} characters. ` +
+          "Keep it concise, in character, and avoid bullet points or multi-line output.",
+      },
     ];
 
     messages.push(
@@ -107,7 +114,7 @@ export const generateDialogue = action({
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content ?? "";
+    return normalizeShortAgentLine(data.choices?.[0]?.message?.content ?? "");
   },
 });
 

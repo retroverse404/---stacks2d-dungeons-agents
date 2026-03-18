@@ -5,7 +5,7 @@ import { EntityLayer } from "./EntityLayer.ts";
 import { ObjectLayer } from "./ObjectLayer.ts";
 import { WorldItemLayer } from "./WorldItemLayer.ts";
 import { InputManager } from "./InputManager.ts";
-import { AudioManager } from "./AudioManager.ts";
+import { AudioManager, type MusicPlaybackSnapshot } from "./AudioManager.ts";
 import { getConvexClient } from "../lib/convexClient.ts";
 import { X402RequestError, resolveX402Url, x402Fetch } from "../lib/x402.ts";
 import { api } from "../../convex/_generated/api";
@@ -26,7 +26,25 @@ const DEFAULT_ITEM_PICKUP_SFX = "/assets/audio/take-item.mp3";
 const DEFAULT_MAP_MUSIC_VOLUME = 0.15;
 const COZY_CABIN_MUSIC_URL = "/assets/audio/Nardis%20%28Miles%20Davis%29%20HipHop%20Remix.mp3";
 const COZY_CABIN_MUSIC_VOLUME = 0.34;
-const RETRO_CAPTCHA_TABLE_OBJECT_KEY = "mel-captcha-table";
+const COZY_CABIN_MUSIC_CREDIT = {
+  title: "Nardis (HipHop Remix)",
+  artist: "Jackie Coleman",
+  context: "Cozy Cabin theme",
+  sourceUrl: "https://www.youtube.com/watch?v=V0Z1vG04YQg",
+} as const;
+const RETRO_CAPTCHA_RUG_OBJECT_KEY = "central-rug-captcha";
+const DUAL_STACKING_VIDEO_OBJECT_KEY = "dual-stacking-screen";
+const COZY_CABIN_PIT_BLOCK_TILES: ReadonlyArray<readonly [number, number]> = [
+  [62, 40],
+  [63, 40],
+  [64, 40],
+  [62, 41],
+  [63, 41],
+  [64, 41],
+  [62, 42],
+  [63, 42],
+  [64, 42],
+];
 const BUILTIN_MAP_ALIASES: Record<string, string> = {
   "Cozy Cabin": "cozy-cabin",
   "cozy-cabin": "Cozy Cabin",
@@ -49,6 +67,10 @@ type SemanticInteractableMeta = {
   premiumOfferKey?: string;
   itemDefName?: string;
   roomLabel?: string;
+  videoUrl?: string;
+  videoProvider?: string;
+  videoTitle?: string;
+  pauseWorldMusic?: boolean;
 };
 
 type PremiumOfferMeta = {
@@ -58,6 +80,10 @@ type PremiumOfferMeta = {
   unlockEventType?: string;
   unlockFactKey?: string;
   resourceId?: string;
+  videoUrl?: string;
+  videoProvider?: string;
+  videoTitle?: string;
+  pauseWorldMusic?: boolean;
 };
 
 type PremiumOfferRecord = {
@@ -72,6 +98,13 @@ type PremiumOfferRecord = {
   endpointPath?: string;
   status: string;
   metadataJson?: string;
+};
+
+type MapMusicCredit = {
+  title: string;
+  artist: string;
+  context?: string;
+  sourceUrl?: string;
 };
 
 type AgentChatterDetails = {
@@ -98,6 +131,15 @@ type SemanticInteractable = {
   metadata: SemanticInteractableMeta;
 };
 
+type PremiumVideoPayload = {
+  videoUrl: string;
+  videoProvider: "youtube" | "video";
+  title: string;
+  summary: string;
+  sourceLabel: string;
+  pauseWorldMusic: boolean;
+};
+
 function parseJsonObject<T>(json: string | undefined): T | null {
   if (!json) return null;
   try {
@@ -109,6 +151,24 @@ function parseJsonObject<T>(json: string | undefined): T | null {
 
 function resolveOfferNetwork(network?: string): "mainnet" | "testnet" {
   return network === "mainnet" || network === "stacks:1" ? "mainnet" : "testnet";
+}
+
+function getYouTubeVideoId(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes("youtu.be")) {
+      return parsed.pathname.replace("/", "") || null;
+    }
+    return parsed.searchParams.get("v");
+  } catch {
+    return null;
+  }
+}
+
+function buildYouTubeEmbedUrl(url: string) {
+  const videoId = getYouTubeVideoId(url);
+  if (!videoId) return null;
+  return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&controls=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1`;
 }
 
 function formatOfferPrice(offer: PremiumOfferRecord) {
@@ -172,6 +232,8 @@ export class Game {
   >();
   private semanticPromptEl: HTMLDivElement | null = null;
   private premiumPanelEl: HTMLDivElement | null = null;
+  private premiumVideoOverlayEl: HTMLDivElement | null = null;
+  private premiumVideoMusicSnapshot: MusicPlaybackSnapshot | null = null;
   private premiumInteractionPending = false;
 
   // Live NPC state subscription
@@ -309,11 +371,26 @@ export class Game {
       }
       mapData.collisionMask[tileY * mapData.width + tileX] = false;
     };
+    const blockCollision = (tileX: number, tileY: number) => {
+      if (
+        tileX < 0 ||
+        tileY < 0 ||
+        tileX >= mapData.width ||
+        tileY >= mapData.height
+      ) {
+        return;
+      }
+      mapData.collisionMask[tileY * mapData.width + tileX] = true;
+    };
 
     for (let tileY = 17; tileY <= 26; tileY++) {
       for (const tileX of [67, 68] as const) {
         clearCollision(tileX, tileY);
       }
+    }
+
+    for (const [tileX, tileY] of COZY_CABIN_PIT_BLOCK_TILES) {
+      blockCollision(tileX, tileY);
     }
   }
 
@@ -346,6 +423,19 @@ export class Game {
       url: mapData.musicUrl || "/assets/audio/cozy.m4a",
       volume: isCozyCabin ? COZY_CABIN_MUSIC_VOLUME : DEFAULT_MAP_MUSIC_VOLUME,
     };
+  }
+
+  private getMapMusicCredit(mapData: MapData | null): MapMusicCredit | null {
+    if (!mapData) return null;
+    const isCozyCabin = mapData.name === "Cozy Cabin" || mapData.id === "cozy-cabin";
+    if (isCozyCabin) {
+      return { ...COZY_CABIN_MUSIC_CREDIT };
+    }
+    return null;
+  }
+
+  getCurrentMusicCredit(): MapMusicCredit | null {
+    return this.getMapMusicCredit(this.currentMapData);
   }
 
   private playMapMusic(mapData: MapData) {
@@ -1449,6 +1539,7 @@ export class Game {
       this.mode !== "play" ||
       this.entityLayer.inDialogue ||
       this.premiumPanelEl ||
+      this.premiumVideoOverlayEl ||
       splashManager.isActive()
     ) {
       return;
@@ -1488,7 +1579,7 @@ export class Game {
     const cooldownMs =
       typeof object.metadata.proximityCooldownMs === "number"
         ? object.metadata.proximityCooldownMs
-        : object.objectKey === RETRO_CAPTCHA_TABLE_OBJECT_KEY
+        : object.objectKey === RETRO_CAPTCHA_RUG_OBJECT_KEY
           ? 45_000
           : 0;
     return cooldownMs <= 0 || Date.now() - state.lastTriggeredAt >= cooldownMs;
@@ -1517,7 +1608,7 @@ export class Game {
   private async openSemanticProximityTrigger(object: SemanticInteractable) {
     this.noteSemanticProximityTriggerOpened(object);
 
-    if (object.objectKey !== RETRO_CAPTCHA_TABLE_OBJECT_KEY) {
+    if (object.objectKey !== RETRO_CAPTCHA_RUG_OBJECT_KEY) {
       const summary =
         object.metadata.interactionSummary ||
         `${this.profile.name} stepped into ${object.label}.`;
@@ -1532,11 +1623,11 @@ export class Game {
 
     const variant = pickRetroCaptchaVariant();
     const summary =
-      `${this.profile.name} stepped onto Mel's table square and triggered a fake Quantum Time Crystal anti-bot popup.`;
+      `${this.profile.name} stepped onto the Cozy Cabin rug and triggered a fake Quantum Time Crystal anti-bot popup.`;
 
     await this.appendSemanticWorldEvent(
       object,
-      object.metadata.eventBindings?.inspect || "captcha-table-triggered",
+      object.metadata.eventBindings?.inspect || "captcha-rug-triggered",
       summary,
       {
         trigger: "proximity",
@@ -1571,14 +1662,14 @@ export class Game {
   ) {
     this.noteSemanticProximityTriggerResolved(object);
     const eventType =
-      answer === "dismissed" ? "captcha-table-dismissed" : "captcha-table-answered";
+      answer === "dismissed" ? "captcha-rug-dismissed" : "captcha-rug-answered";
     let summary = `${this.profile.name} dismissed the fake anti-bot popup at ${object.label}.`;
-    if (answer === "table") {
+    if (answer === "rug") {
       summary =
-        `${this.profile.name} correctly identified Mel's table during a fake Quantum Time Crystal verification.`;
-    } else if (answer === "not-table") {
+        `${this.profile.name} correctly identified the Cozy Cabin rug during a fake Quantum Time Crystal verification.`;
+    } else if (answer === "not-rug") {
       summary =
-        `${this.profile.name} insisted Mel's table was not a table during the retro shareware popup.`;
+        `${this.profile.name} insisted the Cozy Cabin rug was not a rug during the retro shareware popup.`;
     }
 
     await this.appendSemanticWorldEvent(object, eventType, summary, {
@@ -1692,7 +1783,7 @@ export class Game {
   }
 
   private handleSemanticInteraction() {
-    if (this.premiumPanelEl) {
+    if (this.premiumPanelEl || this.premiumVideoOverlayEl) {
       this.hideSemanticPrompt();
       return;
     }
@@ -2071,6 +2162,214 @@ export class Game {
     this.premiumInteractionPending = false;
   }
 
+  private resolvePremiumVideoPayload(
+    object: SemanticInteractable,
+    offerMeta: PremiumOfferMeta,
+    result: Record<string, unknown>,
+  ): PremiumVideoPayload | null {
+    const videoUrl =
+      (typeof result.videoUrl === "string" && result.videoUrl) ||
+      offerMeta.videoUrl ||
+      object.metadata.videoUrl ||
+      null;
+    if (!videoUrl) return null;
+
+    const explicitProvider =
+      (typeof result.videoProvider === "string" && result.videoProvider) ||
+      offerMeta.videoProvider ||
+      object.metadata.videoProvider ||
+      "";
+    const videoProvider =
+      explicitProvider === "video" || (!getYouTubeVideoId(videoUrl) && explicitProvider !== "youtube")
+        ? "video"
+        : "youtube";
+
+    return {
+      videoUrl,
+      videoProvider,
+      title:
+        (typeof result.videoTitle === "string" && result.videoTitle) ||
+        offerMeta.videoTitle ||
+        object.metadata.videoTitle ||
+        (object.objectKey === DUAL_STACKING_VIDEO_OBJECT_KEY ? "Dual Stacking on Bitcoin" : object.label),
+      summary:
+        (typeof result.summary === "string" && result.summary) ||
+        object.metadata.interactionSummary ||
+        `${object.label} is now playing.`,
+      sourceLabel: videoProvider === "youtube" ? "YouTube" : "Video archive",
+      pauseWorldMusic:
+        typeof result.pauseWorldMusic === "boolean"
+          ? result.pauseWorldMusic
+          : (offerMeta.pauseWorldMusic ?? object.metadata.pauseWorldMusic ?? true),
+    };
+  }
+
+  private closePremiumVideoOverlay(resumeMusic = true) {
+    const overlay = this.premiumVideoOverlayEl;
+    if (!overlay) return;
+
+    const media = overlay.querySelector("iframe, video") as HTMLIFrameElement | HTMLVideoElement | null;
+    if (media instanceof HTMLIFrameElement) {
+      media.src = "about:blank";
+    } else if (media instanceof HTMLVideoElement) {
+      media.pause();
+      media.src = "";
+    }
+
+    overlay.remove();
+    this.premiumVideoOverlayEl = null;
+
+    const snapshot = this.premiumVideoMusicSnapshot;
+    this.premiumVideoMusicSnapshot = null;
+    if (resumeMusic && snapshot) {
+      void this.audio.restorePlaybackSnapshot(snapshot);
+    }
+  }
+
+  private openPremiumVideoOverlay(payload: PremiumVideoPayload) {
+    this.closePremiumVideoOverlay(false);
+
+    if (payload.pauseWorldMusic) {
+      this.premiumVideoMusicSnapshot = this.audio.capturePlaybackSnapshot();
+      this.audio.pause();
+    } else {
+      this.premiumVideoMusicSnapshot = null;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 8, 12, 0.82);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10020;
+      padding: 20px;
+      backdrop-filter: blur(2px);
+    `;
+
+    const card = document.createElement("div");
+    card.style.cssText = `
+      width: min(960px, calc(100vw - 32px));
+      max-height: calc(100vh - 40px);
+      background: linear-gradient(180deg, rgba(13, 18, 26, 0.98), rgba(8, 12, 18, 0.98));
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      box-shadow: 0 28px 80px rgba(0,0,0,0.48);
+      color: #f4f1de;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    `;
+
+    const header = document.createElement("div");
+    header.style.cssText = `
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    `;
+
+    const eyebrow = document.createElement("div");
+    eyebrow.textContent = "Premium lesson unlocked";
+    eyebrow.style.cssText = `
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: rgba(247,226,165,0.75);
+      margin-bottom: 6px;
+    `;
+
+    const title = document.createElement("div");
+    title.textContent = payload.title;
+    title.style.cssText = `
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff5d6;
+      margin-bottom: 6px;
+    `;
+
+    const summary = document.createElement("div");
+    summary.textContent = payload.summary;
+    summary.style.cssText = `
+      font-size: 14px;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.76);
+    `;
+
+    header.append(eyebrow, title, summary);
+
+    const mediaWrap = document.createElement("div");
+    mediaWrap.style.cssText = `
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: #000;
+    `;
+
+    if (payload.videoProvider === "youtube") {
+      const embedUrl = buildYouTubeEmbedUrl(payload.videoUrl);
+      if (embedUrl) {
+        const iframe = document.createElement("iframe");
+        iframe.src = embedUrl;
+        iframe.title = payload.title;
+        iframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        iframe.style.cssText = "width:100%;height:100%;border:0;display:block;";
+        mediaWrap.appendChild(iframe);
+      }
+    } else {
+      const video = document.createElement("video");
+      video.src = payload.videoUrl;
+      video.controls = true;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.style.cssText = "width:100%;height:100%;display:block;background:#000;";
+      mediaWrap.appendChild(video);
+    }
+
+    const footer = document.createElement("div");
+    footer.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px 18px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      flex-wrap: wrap;
+    `;
+
+    const note = document.createElement("div");
+    note.textContent = `${payload.sourceLabel} • Cozy Cabin music paused while this lesson is open.`;
+    note.style.cssText = `
+      font-size: 12px;
+      color: rgba(255,255,255,0.62);
+    `;
+
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "Close lesson";
+    closeBtn.style.cssText = `
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.06);
+      color: #f4f1de;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    `;
+    closeBtn.addEventListener("click", () => this.closePremiumVideoOverlay(true));
+
+    footer.append(note, closeBtn);
+    card.append(header, mediaWrap, footer);
+    overlay.appendChild(card);
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        this.closePremiumVideoOverlay(true);
+      }
+    });
+    document.body.appendChild(overlay);
+    this.premiumVideoOverlayEl = overlay;
+  }
+
   private async runPremiumInteractableFlow(
     object: SemanticInteractable,
     offer: PremiumOfferRecord,
@@ -2134,11 +2433,20 @@ export class Game {
         });
       }
 
+      this.showSemanticNotification(successSummary);
+
+      const premiumVideoPayload = this.resolvePremiumVideoPayload(object, offerMeta, result);
+      if (premiumVideoPayload) {
+        controls.status.textContent = "Premium unlock complete. Opening lesson…";
+        this.closePremiumInteractionPanel();
+        this.openPremiumVideoOverlay(premiumVideoPayload);
+        return;
+      }
+
       controls.status.textContent = "Premium unlock complete.";
       controls.body.textContent = this.formatPremiumInteractionResult(result);
       controls.confirmBtn.style.display = "none";
       controls.cancelBtn.disabled = false;
-      this.showSemanticNotification(successSummary);
     } catch (error) {
       console.warn("Premium interactable flow failed:", error);
       controls.status.textContent = "Premium unlock failed.";
@@ -2366,6 +2674,7 @@ export class Game {
     }
     this.premiumPanelEl?.remove();
     this.premiumPanelEl = null;
+    this.closePremiumVideoOverlay(false);
     this.semanticPromptEl?.remove();
     this.semanticPromptEl = null;
     this.audio.destroy();

@@ -19,6 +19,7 @@ import { v } from "convex/values";
 import { internalAction, internalMutation, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { buildWorldEventRecord } from "../lib/worldEvents";
+import { MAX_AGENT_LINE_CHARS, normalizeShortAgentLine } from "../lib/agentCopy";
 
 // ─── Braintrust config (mirrors storyAi.ts) ─────────────────────────────────
 
@@ -247,6 +248,16 @@ async function fetchMarketContext(): Promise<string> {
   return "";
 }
 
+function parseJsonObject(value: string | undefined): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
 // ─── Internal query: recent world events ────────────────────────────────────
 
 export const recentEventsQuery = internalQuery({
@@ -293,6 +304,41 @@ export const agentMemoryQuery = internalQuery({
   },
 });
 
+export const knowledgeFactsQuery = internalQuery({
+  args: {
+    mapName: v.optional(v.string()),
+    limit: v.number(),
+  },
+  handler: async (ctx, { mapName, limit }) => {
+    const allFacts = await ctx.db.query("worldFacts").collect();
+    return allFacts
+      .filter((fact) => {
+        if (mapName && fact.mapName !== mapName) return false;
+        return fact.scope === "world" || fact.scope === undefined || fact.scope === null;
+      })
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, Math.max(1, Math.min(limit, 8)))
+      .map((fact) => {
+        const value = parseJsonObject(fact.valueJson);
+        const summary =
+          typeof value.latestSummary === "string"
+            ? value.latestSummary
+            : typeof value.summary === "string"
+              ? value.summary
+              : null;
+
+        return {
+          factKey: fact.factKey,
+          factType: fact.factType,
+          summary,
+          zoneKey: typeof value.zoneKey === "string" ? value.zoneKey : null,
+          objectKey: typeof value.objectKey === "string" ? value.objectKey : null,
+          updatedAt: fact.updatedAt,
+        };
+      });
+  },
+});
+
 // ─── Internal query: cast (all active agents) ───────────────────────────────
 
 export const castQuery = internalQuery({
@@ -313,9 +359,16 @@ export const postAgentThought = internalMutation({
     roleKey: v.string(),
     mapName: v.optional(v.string()),
     thought: v.string(),
+    displayName: v.optional(v.string()),
     contextTag: v.optional(v.string()),
+    chatterKind: v.optional(v.string()),
+    replyToDisplayName: v.optional(v.string()),
+    replyToRoleKey: v.optional(v.string()),
   },
-  handler: async (ctx, { agentId, roleKey, mapName, thought, contextTag }) => {
+  handler: async (
+    ctx,
+    { agentId, roleKey, mapName, thought, displayName, contextTag, chatterKind, replyToDisplayName, replyToRoleKey },
+  ) => {
     const now = Date.now();
     const existing = await ctx.db
       .query("agentStates")
@@ -351,7 +404,12 @@ export const postAgentThought = internalMutation({
         summary: thought,
         detailsJson: JSON.stringify({
           autonomous: true,
+          displayName: displayName ?? agentId,
+          roleKey,
+          chatterKind: chatterKind ?? "thought",
           ...(contextTag ? { context: contextTag } : {}),
+          ...(replyToDisplayName ? { replyToDisplayName } : {}),
+          ...(replyToRoleKey ? { replyToRoleKey } : {}),
         }),
       }),
     );
@@ -390,12 +448,12 @@ export const agentReactAction = internalAction({
     const userMessage =
       `${triggerAgentName} (${triggerRoleKey}) just said: "${triggerThought}"\n\n` +
       `React with one brief first-person response — as yourself, in character. ` +
-      `Reference what they said. One sentence.`;
+      `Reference what they said. One sentence under ${MAX_AGENT_LINE_CHARS} characters.`;
 
-    const thought = await callBraintrust(apiKey, model, [
+    const thought = normalizeShortAgentLine(await callBraintrust(apiKey, model, [
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },
-    ], 100);
+    ], 100));
 
     if (!thought) return;
 
@@ -404,7 +462,11 @@ export const agentReactAction = internalAction({
       roleKey: reactorRoleKey,
       mapName,
       thought,
+      displayName: reactorDisplayName,
       contextTag: `reaction-to:${triggerRoleKey}`,
+      chatterKind: "reaction",
+      replyToDisplayName: triggerAgentName,
+      replyToRoleKey: triggerRoleKey,
     });
   },
 });
@@ -431,10 +493,11 @@ export const agentThinkAction = internalAction({
     } catch { return; }
 
     // Gather context in parallel
-    const [recentEvents, memory, cast] = await Promise.all([
+    const [recentEvents, memory, cast, knowledgeFacts] = await Promise.all([
       ctx.runQuery((internal as any).agents.agentThink.recentEventsQuery, { mapName, limit: 8 }),
       ctx.runQuery((internal as any).agents.agentThink.agentMemoryQuery, { agentId }),
       ctx.runQuery((internal as any).agents.agentThink.castQuery, { mapName }),
+      ctx.runQuery((internal as any).agents.agentThink.knowledgeFactsQuery, { mapName, limit: 5 }),
     ]);
 
     // Filter out epoch heartbeats — only meaningful events
@@ -472,6 +535,25 @@ export const agentThinkAction = internalAction({
       );
     }
 
+    const knownFacts = (knowledgeFacts as Array<{
+      factKey: string;
+      factType: string;
+      summary: string | null;
+      zoneKey: string | null;
+      objectKey: string | null;
+    }>)
+      .map((fact) => {
+        const location = [fact.zoneKey, fact.objectKey].filter(Boolean).join(" / ");
+        if (fact.summary && location) return `  [${fact.factType}] ${location}: ${fact.summary}`;
+        if (fact.summary) return `  [${fact.factType}] ${fact.summary}`;
+        if (location) return `  [${fact.factType}] ${location}`;
+        return `  [${fact.factType}] ${fact.factKey}`;
+      });
+
+    if (knownFacts.length > 0) {
+      contextParts.push("Known world facts:\n" + knownFacts.join("\n"));
+    }
+
     // Agent's own memory
     const mem = memory as { memorySummary: string | null; recentThoughts: string[]; lastThoughtAt: number | null } | null;
     if (mem?.recentThoughts?.length) {
@@ -501,19 +583,28 @@ export const agentThinkAction = internalAction({
       model,
       [
         { role: "system", content: systemPrompt },
+        {
+          role: "system",
+          content:
+            `Return exactly one sentence under ${MAX_AGENT_LINE_CHARS} characters. ` +
+            "Stay in character and keep the line concise.",
+        },
         { role: "user", content: contextParts.join("\n\n") },
       ],
       120,
     );
 
-    if (!thought) return;
+    const normalizedThought = normalizeShortAgentLine(thought);
+    if (!normalizedThought) return;
 
     await ctx.runMutation((internal as any).agents.agentThink.postAgentThought, {
       agentId,
       roleKey,
       mapName,
-      thought,
+      thought: normalizedThought,
+      displayName,
       contextTag: externalContext || undefined,
+      chatterKind: "thought",
     });
 
     // Trigger a peer reaction with some probability
@@ -529,7 +620,7 @@ export const agentThinkAction = internalAction({
             reactorAgentId: reactor.agentId,
             reactorRoleKey: reactor.roleKey,
             reactorDisplayName: reactor.displayName,
-            triggerThought: thought,
+            triggerThought: normalizedThought,
             triggerAgentName: displayName,
             triggerRoleKey: roleKey,
             mapName,

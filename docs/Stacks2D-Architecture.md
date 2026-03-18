@@ -14,7 +14,7 @@ The current codebase already supports:
 - sprite definitions
 - multiplayer presence foundations
 - NPC runtime state
-- Braintrust-backed AI actions
+- Braintrust proxy-backed AI actions with code-defined prompts
 
 The future direction adds:
 - richer agent logic
@@ -36,7 +36,7 @@ flowchart LR
 
   A["Experience Layer<br/>maps, art, characters, dialogue UI"]
   B["Game Core<br/>movement, collisions, quests, items, NPC runtime"]
-  C["AI Layer<br/>Braintrust dialogue, future memory and planning"]
+  C["AI Layer<br/>Braintrust proxy-backed dialogue and autonomous agent planning"]
   D["Persistence Layer<br/>Convex state and normalized cached records"]
   E["External Integrations<br/>AIBTC, Zero Authority, x402 on Stacks"]
 ```
@@ -46,7 +46,7 @@ flowchart LR
 Live now:
 - TinyRealms world runtime
 - local and cloud-ready Convex backend patterns
-- Braintrust-backed AI path
+- Braintrust proxy-backed AI path
 - Zero Authority backend ingestion and cache
 - Tenero-backed live market ticker in the HUD
 - dedicated in-world surfaces for:

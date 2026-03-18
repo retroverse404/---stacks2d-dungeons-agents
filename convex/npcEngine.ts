@@ -12,23 +12,111 @@ import { internal } from "./_generated/api";
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
-const TICK_MS = 1500; // server tick interval (ms) — was 500ms, increased to reduce DB growth
-const IDLE_MIN_MS = 3000; // minimum idle pause before next wander
-const IDLE_MAX_MS = 8000; // maximum idle pause
+const TICK_MS = 500; // server tick interval (ms) — faster updates keep agents visibly alive
+const IDLE_MIN_MS = 1200; // minimum idle pause before next wander
+const IDLE_MAX_MS = 3200; // maximum idle pause
 const STALE_THRESHOLD_MS = TICK_MS * 4; // if no tick in this long, loop is dead
 const TRADE_DISTANCE_PX = 96;
 const TRADE_COOLDOWN_MS = 12000;
 const TRADE_PRICE = 2;
 const NPC_MIN_SEPARATION_PX = 40;
+const NPC_COLLISION_HALF_W = 5;
+const NPC_COLLISION_TOP = -10;
+const NPC_COLLISION_BOT = 0;
 const POST_LEASH_PX = 20;
-const POST_IDLE_RADIUS_PX = 12;
-const POST_IDLE_MIN_MS = 1200;
-const POST_IDLE_MAX_MS = 2600;
+const POST_IDLE_RADIUS_PX = 28;
+const POST_IDLE_MIN_MS = 700;
+const POST_IDLE_MAX_MS = 1600;
+const SURFACE_IDLE_MIN_MS = 350;
+const SURFACE_IDLE_MAX_MS = 900;
+const MIN_SURFACE_PATROL_DIST = 80;
 
 type RoleMetadata = {
   anchorObjectKey?: string;
   primaryTopics?: string[];
+  routeObjectKeys?: string[];
 };
+
+type MapCollisionInfo = {
+  width: number;
+  height: number;
+  tileWidth: number;
+  tileHeight: number;
+  collisionMask: boolean[];
+};
+
+type WaypointNode = {
+  x: number;
+  y: number;
+  label: string;
+  neighbors: string[];
+};
+
+type RoutedTarget = {
+  x: number;
+  y: number;
+  viaLabel?: string;
+};
+
+const DEFAULT_SURFACE_ROUTE_KEYS: Record<string, string[]> = {
+  guide: ["guide-post", "guide-board", "bookshelf-lore", "coffee-service"],
+  merchant: ["merchant-post", "trade-corner"],
+  market: ["market-post", "price-board", "market-aisle"],
+  quests: ["quest-post", "opportunity-board", "bookshelf-lore", "coffee-service"],
+  curator: ["mel-post", "curation-board", "bookshelf-lore", "phonograph-player", "coffee-service"],
+};
+
+const WAYPOINT_SAMPLE_PX = 18;
+const WAYPOINT_CAPTURE_PX = 28;
+const WAYPOINT_MAX_LINK_DIST = 420;
+const CROWD_DETOUR_PX = 52;
+const CROWD_WAIT_MIN_MS = 160;
+const CROWD_WAIT_MAX_MS = 360;
+const GEOMETRY_WAIT_MIN_MS = 180;
+const GEOMETRY_WAIT_MAX_MS = 420;
+
+const COZY_CABIN_WAYPOINTS: Record<string, WaypointNode> = {
+  upperHall: { x: 708, y: 336, label: "upper hall", neighbors: ["marketDesk", "studyDoor", "centerHall"] },
+  marketDesk: { x: 828, y: 336, label: "market desk", neighbors: ["upperHall", "marketAisle"] },
+  marketAisle: { x: 876, y: 336, label: "market aisle", neighbors: ["marketDesk", "studyDoor"] },
+  studyDoor: { x: 840, y: 288, label: "study door", neighbors: ["upperHall", "marketAisle"] },
+  centerHall: { x: 900, y: 600, label: "center hall", neighbors: ["upperHall", "centerSouthA"] },
+  centerSouthA: { x: 912, y: 732, label: "south corridor", neighbors: ["centerHall", "centerSouthB"] },
+  centerSouthB: { x: 948, y: 852, label: "south approach", neighbors: ["centerSouthA", "southHall"] },
+  southHall: { x: 984, y: 960, label: "south hall", neighbors: ["centerSouthB", "eastHallA", "tavernBridgeA"] },
+  eastHallA: { x: 1200, y: 960, label: "east hall", neighbors: ["southHall", "eastHallB"] },
+  eastHallB: { x: 1440, y: 1104, label: "east passage", neighbors: ["eastHallA", "eastHallC"] },
+  eastHallC: { x: 1560, y: 1248, label: "music approach", neighbors: ["eastHallB", "musicEntry"] },
+  tavernBridgeA: { x: 996, y: 1092, label: "tavern bridge", neighbors: ["southHall", "tavernBridgeB"] },
+  tavernBridgeB: { x: 1020, y: 1192, label: "tavern threshold", neighbors: ["tavernBridgeA", "tavernEntry"] },
+  tavernEntry: { x: 1032, y: 1296, label: "tavern entry", neighbors: ["tavernBridgeB", "barLeft"] },
+  barLeft: { x: 1104, y: 1344, label: "bar left", neighbors: ["tavernEntry", "barCenter", "barSouth"] },
+  barCenter: { x: 1176, y: 1344, label: "bar center", neighbors: ["barLeft"] },
+  barSouth: { x: 1176, y: 1416, label: "bar south", neighbors: ["barLeft"] },
+  musicEntry: { x: 1560, y: 1296, label: "music entry", neighbors: ["eastHallC", "musicMid"] },
+  musicMid: { x: 1632, y: 1296, label: "music corridor", neighbors: ["musicEntry", "phonographDoor"] },
+  phonographDoor: { x: 1848, y: 1464, label: "phonograph door", neighbors: ["musicMid"] },
+};
+
+const WAYPOINT_GRAPHS: Record<string, Record<string, WaypointNode>> = {
+  "Cozy Cabin": COZY_CABIN_WAYPOINTS,
+};
+
+const COZY_CABIN_PIT_BLOCK_TILES: ReadonlyArray<readonly [number, number]> = [
+  [62, 40],
+  [63, 40],
+  [64, 40],
+  [62, 41],
+  [63, 41],
+  [64, 41],
+  [62, 42],
+  [63, 42],
+  [64, 42],
+];
+const COZY_CABIN_PASSAGE_CLEAR_TILES: ReadonlyArray<readonly [number, number]> = [
+  ...Array.from({ length: 10 }, (_, offset) => [67, 17 + offset] as [number, number]),
+  ...Array.from({ length: 10 }, (_, offset) => [68, 17 + offset] as [number, number]),
+];
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -196,6 +284,64 @@ function parseRoleMetadata(metadataJson?: string): RoleMetadata {
   }
 }
 
+function parseJsonObject(metadataJson?: string) {
+  if (!metadataJson) return {};
+  try {
+    const parsed = JSON.parse(metadataJson);
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function sanitizePatrolDetail(detail?: string) {
+  return detail?.split(" via ")[0] ?? "continuing patrol";
+}
+
+function resolveSemanticNavAnchor(object: {
+  x?: number;
+  y?: number;
+  label?: string;
+  metadataJson?: string;
+}) {
+  const meta = parseJsonObject(object.metadataJson);
+  const navAnchor =
+    meta.navAnchor && typeof meta.navAnchor === "object"
+      ? (meta.navAnchor as Record<string, unknown>)
+      : null;
+  const anchorX = typeof navAnchor?.x === "number" ? navAnchor.x : object.x;
+  const anchorY = typeof navAnchor?.y === "number" ? navAnchor.y : object.y;
+  const label = typeof navAnchor?.label === "string" ? navAnchor.label : object.label;
+  return anchorX != null && anchorY != null
+    ? { x: anchorX, y: anchorY, label: label ?? "surface" }
+    : null;
+}
+
+function getRoleSurfaceAnchors(
+  npc: { mapName: string; spawnX?: number; spawnY?: number },
+  role: { roleKey?: string; postObjectKey?: string } | null | undefined,
+  roleMeta: RoleMetadata,
+  semanticObjectsByKey: Map<string, any>,
+) {
+  const anchors = uniqueKeys([
+    role?.postObjectKey,
+    roleMeta.anchorObjectKey,
+    ...(roleMeta.routeObjectKeys ?? DEFAULT_SURFACE_ROUTE_KEYS[role?.roleKey ?? ""] ?? []),
+  ])
+    .map((objectKey) => {
+      const object = semanticObjectsByKey.get(`${npc.mapName}:${objectKey}`);
+      const anchor = object ? resolveSemanticNavAnchor(object) : null;
+      return anchor ? { x: anchor.x, y: anchor.y, label: anchor.label } : null;
+    })
+    .filter((anchor): anchor is NonNullable<typeof anchor> => anchor !== null);
+
+  if (npc.spawnX != null && npc.spawnY != null) {
+    anchors.push({ x: npc.spawnX, y: npc.spawnY, label: "spawn" });
+  }
+
+  return anchors;
+}
+
 function choosePostIdleTarget(
   post: { x: number; y: number },
   npcId: string,
@@ -219,6 +365,134 @@ function choosePostIdleTarget(
   }
 
   return fallback;
+}
+
+function uniqueKeys(keys: Array<string | undefined>) {
+  return Array.from(new Set(keys.filter((key): key is string => !!key)));
+}
+
+function shuffleArray<T>(values: T[]) {
+  const next = [...values];
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
+}
+
+function chooseSurfacePatrolTarget(
+  npc: { _id: unknown; mapName: string; x: number; y: number; targetX?: number; targetY?: number },
+  role: { roleKey?: string; postObjectKey?: string } | undefined,
+  roleMeta: RoleMetadata,
+  semanticObjectsByKey: Map<string, any>,
+  mapCollision: MapCollisionInfo | undefined,
+  allNpcs: { _id: unknown; mapName: string; x: number; y: number }[],
+  desiredTargets: Map<string, { x: number; y: number; detail: string }>,
+) {
+  const anchors = getRoleSurfaceAnchors(npc, role, roleMeta, semanticObjectsByKey);
+
+  const candidates = anchors
+      .map((anchor, index) => {
+        const distFromNpc = distance(npc, { x: anchor.x, y: anchor.y });
+        const distFromCurrentTarget =
+          npc.targetX != null && npc.targetY != null
+            ? distance({ x: npc.targetX, y: npc.targetY }, { x: anchor.x, y: anchor.y })
+            : Infinity;
+        return {
+          objectKey: `${anchor.label}:${index}`,
+          x: anchor.x,
+          y: anchor.y,
+          label: anchor.label,
+          distFromNpc,
+          distFromCurrentTarget,
+          isReachable:
+            isDirectPathClear(mapCollision, npc, { x: anchor.x, y: anchor.y }) ||
+            routeTargetThroughWaypoints(
+              npc.mapName,
+              mapCollision,
+              { x: npc.x, y: npc.y },
+              { x: anchor.x, y: anchor.y },
+            ) !== null,
+        };
+      })
+      .filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null);
+
+  const currentCandidate =
+    npc.targetX != null && npc.targetY != null
+      ? candidates.find(
+          (candidate) =>
+            distance({ x: npc.targetX!, y: npc.targetY! }, { x: candidate.x, y: candidate.y }) <=
+            POST_IDLE_RADIUS_PX,
+        )
+      : null;
+
+  if (currentCandidate && distance(npc, currentCandidate) > POST_IDLE_RADIUS_PX) {
+    return {
+      x: currentCandidate.x,
+      y: currentCandidate.y,
+      detail: `roaming toward ${currentCandidate.label}`,
+    };
+  }
+
+  const shuffledCandidates = shuffleArray(
+    candidates,
+  );
+
+  const viable = shuffledCandidates.filter(
+    (candidate) =>
+      candidate.isReachable &&
+      candidate.distFromNpc >= MIN_SURFACE_PATROL_DIST &&
+      candidate.distFromCurrentTarget >= POST_IDLE_RADIUS_PX,
+  );
+  const reachable = shuffledCandidates.filter((candidate) => candidate.isReachable);
+  const pool = viable.length > 0 ? viable : reachable.length > 0 ? reachable : shuffledCandidates;
+
+  for (const candidate of pool) {
+    if (
+      !isCrowdedTarget(
+        { x: candidate.x, y: candidate.y },
+        allNpcs,
+        npc.mapName,
+        String(npc._id),
+        desiredTargets,
+      )
+    ) {
+      return {
+        x: candidate.x,
+        y: candidate.y,
+        detail: `roaming toward ${candidate.label}`,
+      };
+    }
+  }
+
+  const fallback = pool[0];
+  return fallback
+    ? {
+        x: fallback.x,
+        y: fallback.y,
+        detail: `roaming toward ${fallback.label}`,
+      }
+    : null;
+}
+
+function chooseNpcRecoveryTarget(
+  npc: { mapName: string; x: number; y: number; spawnX?: number; spawnY?: number },
+  role: { roleKey?: string; postObjectKey?: string } | null | undefined,
+  roleMeta: RoleMetadata,
+  semanticObjectsByKey: Map<string, any>,
+  mapCollision: MapCollisionInfo | undefined,
+) {
+  const graph = WAYPOINT_GRAPHS[npc.mapName];
+  const candidates = [
+    ...getRoleSurfaceAnchors(npc, role, roleMeta, semanticObjectsByKey),
+    ...Object.values(graph ?? {}).map((node) => ({ x: node.x, y: node.y, label: node.label })),
+  ].filter((candidate) => !isMapBlocked(mapCollision, candidate.x, candidate.y));
+
+  const ranked = candidates.sort(
+    (a, b) => distance(npc, { x: a.x, y: a.y }) - distance(npc, { x: b.x, y: b.y }),
+  );
+
+  return ranked[0] ?? null;
 }
 
 function randomDirection() {
@@ -254,6 +528,237 @@ function hasRecentNpcLoopActivity(
   );
 }
 
+function parseCollisionMask(raw: string | undefined) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function applyCozyCabinCollisionFixups(
+  mapName: string,
+  collisionMask: boolean[],
+  width: number,
+  height: number,
+) {
+  const normalized = mapName.toLowerCase();
+  const isCozyCabin = normalized === "cozy cabin" || normalized === "cozy-cabin";
+  if (!isCozyCabin) return collisionMask;
+
+  const next = [...collisionMask];
+  for (const [tileX, tileY] of COZY_CABIN_PASSAGE_CLEAR_TILES) {
+    if (tileX < 0 || tileY < 0 || tileX >= width || tileY >= height) continue;
+    next[tileY * width + tileX] = false;
+  }
+  for (const [tileX, tileY] of COZY_CABIN_PIT_BLOCK_TILES) {
+    if (tileX < 0 || tileY < 0 || tileX >= width || tileY >= height) continue;
+    next[tileY * width + tileX] = true;
+  }
+  return next;
+}
+
+function buildMapCollisionIndex(
+  maps: Array<{
+    name: string;
+    width: number;
+    height: number;
+    tileWidth: number;
+    tileHeight: number;
+    collisionMask: string;
+  }>,
+) {
+  return new Map(
+    maps.map((map) => [
+      map.name,
+      {
+        width: map.width,
+        height: map.height,
+        tileWidth: map.tileWidth,
+        tileHeight: map.tileHeight,
+        collisionMask: applyCozyCabinCollisionFixups(
+          map.name,
+          parseCollisionMask(map.collisionMask),
+          map.width,
+          map.height,
+        ),
+      } satisfies MapCollisionInfo,
+    ]),
+  );
+}
+
+function worldToTile(map: MapCollisionInfo, px: number, py: number) {
+  return {
+    tileX: Math.floor(px / map.tileWidth),
+    tileY: Math.floor(py / map.tileHeight),
+  };
+}
+
+function isTileBlocked(map: MapCollisionInfo, tileX: number, tileY: number) {
+  if (tileX < 0 || tileY < 0 || tileX >= map.width || tileY >= map.height) return true;
+  return Boolean(map.collisionMask[tileY * map.width + tileX]);
+}
+
+function isMapBlocked(map: MapCollisionInfo | undefined, px: number, py: number) {
+  if (!map) return false;
+
+  const left = px - NPC_COLLISION_HALF_W;
+  const right = px + NPC_COLLISION_HALF_W;
+  const top = py + NPC_COLLISION_TOP;
+  const bot = py + NPC_COLLISION_BOT;
+
+  const tl = worldToTile(map, left, top);
+  const tr = worldToTile(map, right, top);
+  const bl = worldToTile(map, left, bot);
+  const br = worldToTile(map, right, bot);
+
+  return (
+    isTileBlocked(map, tl.tileX, tl.tileY) ||
+    isTileBlocked(map, tr.tileX, tr.tileY) ||
+    isTileBlocked(map, bl.tileX, bl.tileY) ||
+    isTileBlocked(map, br.tileX, br.tileY)
+  );
+}
+
+function isDirectPathClear(
+  map: MapCollisionInfo | undefined,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+) {
+  if (!map) return true;
+  const dist = distance(from, to);
+  const steps = Math.max(2, Math.ceil(dist / WAYPOINT_SAMPLE_PX));
+  for (let i = 1; i <= steps; i += 1) {
+    const t = i / steps;
+    const px = from.x + (to.x - from.x) * t;
+    const py = from.y + (to.y - from.y) * t;
+    if (isMapBlocked(map, px, py)) return false;
+  }
+  return true;
+}
+
+function findNearestWaypointId(
+  graph: Record<string, WaypointNode>,
+  map: MapCollisionInfo | undefined,
+  point: { x: number; y: number },
+) {
+  let bestId: string | null = null;
+  let bestDist = Number.POSITIVE_INFINITY;
+
+  for (const [id, node] of Object.entries(graph)) {
+    const distFromPoint = distance(point, node);
+    if (distFromPoint > WAYPOINT_MAX_LINK_DIST) continue;
+    if (!isDirectPathClear(map, point, node)) continue;
+    if (distFromPoint < bestDist) {
+      bestDist = distFromPoint;
+      bestId = id;
+    }
+  }
+
+  return bestId;
+}
+
+function findWaypointPath(
+  graph: Record<string, WaypointNode>,
+  startId: string,
+  goalId: string,
+) {
+  if (startId === goalId) return [startId];
+
+  const queue: string[] = [startId];
+  const cameFrom = new Map<string, string | null>([[startId, null]]);
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (current === goalId) break;
+    for (const next of graph[current]?.neighbors ?? []) {
+      if (!graph[next] || cameFrom.has(next)) continue;
+      cameFrom.set(next, current);
+      queue.push(next);
+    }
+  }
+
+  if (!cameFrom.has(goalId)) return null;
+
+  const path: string[] = [];
+  let cursor: string | null = goalId;
+  while (cursor) {
+    path.unshift(cursor);
+    cursor = cameFrom.get(cursor) ?? null;
+  }
+  return path;
+}
+
+function routeTargetThroughWaypoints(
+  mapName: string,
+  map: MapCollisionInfo | undefined,
+  current: { x: number; y: number },
+  target: { x: number; y: number },
+): RoutedTarget | null {
+  const graph = WAYPOINT_GRAPHS[mapName];
+  if (!graph || !map) return null;
+  if (isDirectPathClear(map, current, target)) return null;
+
+  const startId = findNearestWaypointId(graph, map, current);
+  const goalId = findNearestWaypointId(graph, map, target);
+  if (!startId || !goalId) return null;
+
+  if (startId === goalId) {
+    const node = graph[startId];
+    if (distance(current, node) > WAYPOINT_CAPTURE_PX) {
+      return { x: node.x, y: node.y, viaLabel: node.label };
+    }
+    return null;
+  }
+
+  const path = findWaypointPath(graph, startId, goalId);
+  if (!path || path.length === 0) return null;
+
+  const startNode = graph[startId];
+  if (distance(current, startNode) > WAYPOINT_CAPTURE_PX) {
+    return { x: startNode.x, y: startNode.y, viaLabel: startNode.label };
+  }
+
+  const nextNodeId = path[1];
+  if (!nextNodeId || !graph[nextNodeId]) return null;
+  const nextNode = graph[nextNodeId];
+  return { x: nextNode.x, y: nextNode.y, viaLabel: nextNode.label };
+}
+
+function chooseCrowdDetourTarget(
+  npc: { _id: unknown; mapName: string; x: number; y: number },
+  moveTarget: { x: number; y: number },
+  mapCollision: MapCollisionInfo | undefined,
+  allNpcs: { _id: unknown; mapName: string; x: number; y: number }[],
+  desiredTargets: Map<string, { x: number; y: number; detail: string }>,
+) {
+  const dx = moveTarget.x - npc.x;
+  const dy = moveTarget.y - npc.y;
+  const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+  const nx = dx / dist;
+  const ny = dy / dist;
+
+  const candidates = [
+    { x: npc.x - ny * CROWD_DETOUR_PX, y: npc.y + nx * CROWD_DETOUR_PX, detail: "sidestepping left" },
+    { x: npc.x + ny * CROWD_DETOUR_PX, y: npc.y - nx * CROWD_DETOUR_PX, detail: "sidestepping right" },
+    { x: npc.x - nx * (CROWD_DETOUR_PX * 0.6), y: npc.y - ny * (CROWD_DETOUR_PX * 0.6), detail: "backing away" },
+  ];
+
+  for (const candidate of candidates) {
+    if (isMapBlocked(mapCollision, candidate.x, candidate.y)) continue;
+    if (isCrowdedTarget(candidate, allNpcs, npc.mapName, String(npc._id), desiredTargets)) continue;
+    return candidate;
+  }
+
+  return null;
+}
+
+function randomDuration(minMs: number, maxMs: number) {
+  return minMs + Math.random() * Math.max(0, maxMs - minMs);
+}
+
 // ---------------------------------------------------------------------------
 // Tick loop (internal — not callable from client)
 // ---------------------------------------------------------------------------
@@ -274,7 +779,9 @@ export const tick = internalMutation({
     }
     const dt = TICK_MS / 1000; // seconds per tick
     const allProfiles = await ctx.db.query("npcProfiles").collect();
+    const allMaps = await ctx.db.query("maps").collect();
     const profilesByName = new Map(allProfiles.map((profile) => [profile.name, profile]));
+    const mapsByName = buildMapCollisionIndex(allMaps);
     const statesById = new Map(allNpcs.map((npc) => [String(npc._id), npc]));
     const desiredTargets = new Map<string, { x: number; y: number; detail: string }>();
     const roleAssignments = await ctx.db.query("npcRoleAssignments").collect();
@@ -316,34 +823,18 @@ export const tick = internalMutation({
         }
       }
 
-      if (shouldPatrolSurface && role?.postObjectKey) {
-        const post = semanticObjectsByKey.get(`${npc.mapName}:${role.postObjectKey}`);
-        const anchor = roleMeta.anchorObjectKey
-          ? semanticObjectsByKey.get(`${npc.mapName}:${roleMeta.anchorObjectKey}`)
-          : null;
-        if (post?.x != null && post?.y != null) {
-          const movingTowardAnchor =
-            npc.targetX != null &&
-            npc.targetY != null &&
-            anchor?.x != null &&
-            anchor?.y != null &&
-            distance({ x: npc.targetX, y: npc.targetY }, { x: anchor.x, y: anchor.y }) <= POST_IDLE_RADIUS_PX + 6;
-          const baseTarget =
-            !movingTowardAnchor && anchor?.x != null && anchor?.y != null
-              ? { x: anchor.x, y: anchor.y, label: anchor.label }
-              : { x: post.x, y: post.y, label: post.label };
-          const patrolTarget = choosePostIdleTarget(
-            { x: baseTarget.x, y: baseTarget.y },
-            String(npc._id),
-            allNpcs,
-            npc.mapName,
-            desiredTargets,
-          );
-          desiredTargets.set(String(npc._id), {
-            x: patrolTarget.x,
-            y: patrolTarget.y,
-            detail: `patrolling surface between ${post.label} and ${baseTarget.label}`,
-          });
+      if (shouldPatrolSurface) {
+        const patrolTarget = chooseSurfacePatrolTarget(
+          npc,
+          role,
+          roleMeta,
+          semanticObjectsByKey,
+          mapsByName.get(npc.mapName),
+          allNpcs,
+          desiredTargets,
+        );
+        if (patrolTarget) {
+          desiredTargets.set(String(npc._id), patrolTarget);
           continue;
         }
       }
@@ -439,6 +930,51 @@ export const tick = internalMutation({
       const role = refreshed.instanceName
         ? rolesByAgentId.get(refreshed.instanceName)
         : null;
+      const roleMeta = parseRoleMetadata(role?.metadataJson);
+      const mapCollision = mapsByName.get(refreshed.mapName);
+
+      if (isMapBlocked(mapCollision, refreshed.x, refreshed.y)) {
+        const recoveryTarget = chooseNpcRecoveryTarget(
+          refreshed,
+          role,
+          roleMeta,
+          semanticObjectsByKey,
+          mapCollision,
+        );
+        if (recoveryTarget) {
+          const recoveryIdleUntil = now + randomDuration(GEOMETRY_WAIT_MIN_MS, GEOMETRY_WAIT_MAX_MS);
+          const recoveryRoleState = roleIntent(role?.roleKey, false);
+          await ctx.db.patch(refreshed._id, {
+            x: recoveryTarget.x,
+            y: recoveryTarget.y,
+            vx: 0,
+            vy: 0,
+            targetX: undefined,
+            targetY: undefined,
+            idleUntil: recoveryIdleUntil,
+            currentIntent: recoveryRoleState.currentIntent,
+            intentDetail: `recovering to ${recoveryTarget.label}`,
+            mood: "focused",
+            lastTick: now,
+          });
+          statesById.set(String(refreshed._id), {
+            ...refreshed,
+            x: recoveryTarget.x,
+            y: recoveryTarget.y,
+            vx: 0,
+            vy: 0,
+            targetX: undefined,
+            targetY: undefined,
+            idleUntil: recoveryIdleUntil,
+            currentIntent: recoveryRoleState.currentIntent,
+            intentDetail: `recovering to ${recoveryTarget.label}`,
+            mood: "focused",
+            lastTick: now,
+          });
+          continue;
+        }
+      }
+
       const desiredTarget = desiredTargets.get(String(refreshed._id));
       const desiredItem = profile?.desiredItem;
       const hasDesiredItem =
@@ -448,6 +984,7 @@ export const tick = internalMutation({
         desiredTarget?.detail?.startsWith("patrolling post") ||
         desiredTarget?.detail?.startsWith("returning to post") ||
         desiredTarget?.detail?.startsWith("patrolling surface");
+      const isSurfaceRoam = desiredTarget?.detail?.startsWith("roaming toward");
       const roleState = roleIntent(role?.roleKey, hasDesiredItem);
 
       // --- Idle check ---
@@ -476,32 +1013,53 @@ export const tick = internalMutation({
       }
 
       // --- Pick a new target if we don't have one ---
-      let targetX = refreshed.targetX;
-      let targetY = refreshed.targetY;
+      let goalX = refreshed.targetX;
+      let goalY = refreshed.targetY;
+      const finalTarget = desiredTarget
+        ? { x: desiredTarget.x, y: desiredTarget.y }
+        : goalX != null && goalY != null
+          ? { x: goalX, y: goalY }
+          : null;
 
-      if (targetX == null || targetY == null) {
+      if (goalX == null || goalY == null) {
         if (desiredTarget) {
-          targetX = desiredTarget.x;
-          targetY = desiredTarget.y;
+          goalX = desiredTarget.x;
+          goalY = desiredTarget.y;
         } else {
           const wanderTarget = findWanderTarget(refreshed, allNpcs, desiredTargets);
-          targetX = wanderTarget.x;
-          targetY = wanderTarget.y;
+          goalX = wanderTarget.x;
+          goalY = wanderTarget.y;
         }
       }
 
+      const routedTarget =
+        goalX != null && goalY != null
+          ? routeTargetThroughWaypoints(
+              refreshed.mapName,
+              mapsByName.get(refreshed.mapName),
+              { x: refreshed.x, y: refreshed.y },
+              finalTarget ?? { x: goalX, y: goalY },
+            )
+          : null;
+      const moveTarget = routedTarget ?? { x: goalX!, y: goalY! };
+
       // --- Move toward target ---
-      const dx = targetX - refreshed.x;
-      const dy = targetY - refreshed.y;
+      const dx = moveTarget.x - refreshed.x;
+      const dy = moveTarget.y - refreshed.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       const step = refreshed.speed * dt;
       const nextIntent = isHoldingPost
         ? roleState.currentIntent
-        : desiredTarget
+        : isSurfaceRoam
+          ? roleState.currentIntent
+          : desiredTarget
           ? "seeking-trade"
           : "wandering";
+      const routedDetailSuffix = routedTarget?.viaLabel ? ` via ${routedTarget.viaLabel}` : "";
       const nextDetail =
-        desiredTarget?.detail ??
+        desiredTarget?.detail
+          ? `${desiredTarget.detail}${routedDetailSuffix}`
+          :
         (hasDesiredItem ? `carrying ${desiredItem}` : roleState.intentDetail);
       const nextMood = isHoldingPost
         ? roleState.mood
@@ -512,16 +1070,49 @@ export const tick = internalMutation({
             : "curious";
 
       if (dist <= step + 1) {
-        // Reached target — go idle
-        const idleDuration =
-          isHoldingPost
-            ? POST_IDLE_MIN_MS + Math.random() * (POST_IDLE_MAX_MS - POST_IDLE_MIN_MS)
-            : IDLE_MIN_MS + Math.random() * (IDLE_MAX_MS - IDLE_MIN_MS);
+        if (routedTarget && finalTarget && distance(moveTarget, finalTarget) > WAYPOINT_CAPTURE_PX) {
+          await ctx.db.patch(refreshed._id, {
+            x: moveTarget.x,
+            y: moveTarget.y,
+            vx: 0,
+            vy: 0,
+            targetX: goalX,
+            targetY: goalY,
+            currentIntent: nextIntent,
+            intentDetail: nextDetail,
+            mood: nextMood,
+            idleUntil: undefined,
+            lastTick: now,
+          });
+          statesById.set(String(refreshed._id), {
+            ...refreshed,
+            x: moveTarget.x,
+            y: moveTarget.y,
+            vx: 0,
+            vy: 0,
+            targetX: goalX,
+            targetY: goalY,
+            currentIntent: nextIntent,
+            intentDetail: nextDetail,
+            mood: nextMood,
+            idleUntil: undefined,
+            lastTick: now,
+          });
+          continue;
+        }
+
+        // Reached final target — go idle
+          const idleDuration =
+            isHoldingPost
+              ? randomDuration(POST_IDLE_MIN_MS, POST_IDLE_MAX_MS)
+              : isSurfaceRoam
+                ? randomDuration(SURFACE_IDLE_MIN_MS, SURFACE_IDLE_MAX_MS)
+                : randomDuration(IDLE_MIN_MS, IDLE_MAX_MS);
         const idleDirection = isHoldingPost ? randomDirection() : refreshed.direction;
         const nextState = {
           ...refreshed,
-          x: targetX,
-          y: targetY,
+          x: moveTarget.x,
+          y: moveTarget.y,
           vx: 0,
           vy: 0,
           targetX: undefined,
@@ -529,6 +1120,8 @@ export const tick = internalMutation({
           idleUntil: now + idleDuration,
           currentIntent: isHoldingPost
             ? roleState.currentIntent
+            : isSurfaceRoam
+              ? roleState.currentIntent
             : hasDesiredItem
               ? "resting"
               : nextIntent,
@@ -542,18 +1135,20 @@ export const tick = internalMutation({
           lastTick: now,
         };
         await ctx.db.patch(refreshed._id, {
-          x: targetX,
-          y: targetY,
+          x: moveTarget.x,
+          y: moveTarget.y,
           vx: 0,
           vy: 0,
           targetX: undefined,
           targetY: undefined,
           idleUntil: now + idleDuration,
-          currentIntent: isHoldingPost
-            ? roleState.currentIntent
-            : hasDesiredItem
-              ? "resting"
-              : nextIntent,
+            currentIntent: isHoldingPost
+              ? roleState.currentIntent
+              : isSurfaceRoam
+                ? roleState.currentIntent
+              : hasDesiredItem
+                ? "resting"
+                : nextIntent,
           intentDetail: isHoldingPost
             ? roleState.intentDetail
             : hasDesiredItem
@@ -578,55 +1173,127 @@ export const tick = internalMutation({
         );
 
         if (blockingNpc) {
-          const idleDuration =
-            IDLE_MIN_MS + Math.random() * Math.min(2000, IDLE_MAX_MS - IDLE_MIN_MS);
+          const detourTarget = chooseCrowdDetourTarget(
+            refreshed,
+            moveTarget,
+            mapsByName.get(refreshed.mapName),
+            currentNpcStates(statesById),
+            desiredTargets,
+          );
+
+          if (detourTarget) {
+            newX = detourTarget.x;
+            newY = detourTarget.y;
+          } else {
+            const idleDuration = randomDuration(CROWD_WAIT_MIN_MS, CROWD_WAIT_MAX_MS);
+            await ctx.db.patch(refreshed._id, {
+              vx: 0,
+              vy: 0,
+              targetX: goalX,
+              targetY: goalY,
+              idleUntil: now + idleDuration,
+              currentIntent: nextIntent,
+              intentDetail: "making room to continue patrol",
+              mood: "focused",
+              lastTick: now,
+            });
+            statesById.set(String(refreshed._id), {
+              ...refreshed,
+              vx: 0,
+              vy: 0,
+              targetX: goalX,
+              targetY: goalY,
+              idleUntil: now + idleDuration,
+              currentIntent: nextIntent,
+              intentDetail: "making room to continue patrol",
+              mood: "focused",
+              lastTick: now,
+            });
+            continue;
+          }
+        }
+
+        const mapCollision = mapsByName.get(refreshed.mapName);
+        let moveX = newX;
+        let moveY = newY;
+        let moved = true;
+
+        if (isMapBlocked(mapCollision, moveX, moveY)) {
+          const canSlideX = !isMapBlocked(mapCollision, moveX, refreshed.y);
+          const canSlideY = !isMapBlocked(mapCollision, refreshed.x, moveY);
+
+          if (canSlideX) {
+            moveY = refreshed.y;
+          } else if (canSlideY) {
+            moveX = refreshed.x;
+          } else {
+            const geometryDetour = chooseCrowdDetourTarget(
+              refreshed,
+              moveTarget,
+              mapCollision,
+              currentNpcStates(statesById),
+              desiredTargets,
+            );
+            if (geometryDetour) {
+              moveX = geometryDetour.x;
+              moveY = geometryDetour.y;
+            } else {
+              moved = false;
+            }
+          }
+        }
+
+        if (!moved) {
+          const idleDuration = randomDuration(GEOMETRY_WAIT_MIN_MS, GEOMETRY_WAIT_MAX_MS);
           await ctx.db.patch(refreshed._id, {
             vx: 0,
             vy: 0,
-            targetX: undefined,
-            targetY: undefined,
+            targetX: goalX,
+            targetY: goalY,
             idleUntil: now + idleDuration,
-            currentIntent: "idle",
-            intentDetail: "waiting for space to clear",
-            mood: "calm",
+            currentIntent: roleState.currentIntent,
+            intentDetail: "repositioning around room geometry",
+            mood: "focused",
             lastTick: now,
           });
           statesById.set(String(refreshed._id), {
             ...refreshed,
             vx: 0,
             vy: 0,
-            targetX: undefined,
-            targetY: undefined,
+            targetX: goalX,
+            targetY: goalY,
             idleUntil: now + idleDuration,
-            currentIntent: "idle",
-            intentDetail: "waiting for space to clear",
-            mood: "calm",
+            currentIntent: roleState.currentIntent,
+            intentDetail: "repositioning around room geometry",
+            mood: "focused",
             lastTick: now,
           });
           continue;
         }
 
-        // Velocity for client extrapolation
-        const vx = (dx / dist) * refreshed.speed;
-        const vy = (dy / dist) * refreshed.speed;
+        const actualDx = moveX - refreshed.x;
+        const actualDy = moveY - refreshed.y;
+        const actualDist = Math.sqrt(actualDx * actualDx + actualDy * actualDy);
+        const vx = actualDist > 0 ? (actualDx / actualDist) * refreshed.speed : 0;
+        const vy = actualDist > 0 ? (actualDy / actualDist) * refreshed.speed : 0;
 
         // Determine facing direction
         const direction =
-          Math.abs(dx) > Math.abs(dy)
-            ? dx > 0
+          Math.abs(actualDx) > Math.abs(actualDy)
+            ? actualDx > 0
               ? "right"
               : "left"
-            : dy > 0
+            : actualDy > 0
               ? "down"
               : "up";
 
         await ctx.db.patch(refreshed._id, {
-          x: newX,
-          y: newY,
+          x: moveX,
+          y: moveY,
           vx,
           vy,
-          targetX,
-          targetY,
+          targetX: goalX,
+          targetY: goalY,
           direction,
           currentIntent: nextIntent,
           intentDetail: nextDetail,
@@ -636,12 +1303,12 @@ export const tick = internalMutation({
         });
         statesById.set(String(refreshed._id), {
           ...refreshed,
-          x: newX,
-          y: newY,
+          x: moveX,
+          y: moveY,
           vx,
           vy,
-          targetX,
-          targetY,
+          targetX: goalX,
+          targetY: goalY,
           direction,
           currentIntent: nextIntent,
           intentDetail: nextDetail,

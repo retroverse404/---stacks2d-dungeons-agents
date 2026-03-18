@@ -60,6 +60,7 @@ These should be added or refined as semantic regions in `convex/localDev.ts`.
 | `guide-wing` | Guide Wing | `guide` | guide desk and educational surfaces |
 | `market-wing` | Market Wing | `market` | market.btc and trade surfaces |
 | `study-wing` | Study Wing | `study` | bookshelf, broom, and quieter lore surfaces |
+| `private-room` | Private Room | `study` | premium lesson screen and quiet media surfaces |
 | `bar-hub` | Bar Hub | `social` | coffee, beer, bartender, rumor interactions |
 | `rest-nook` | Rest Nook | `rest` | beds, side-room, low-noise state |
 | `back-room` | Back Room | `storage` | barrels, shelves, hidden hooks |
@@ -192,31 +193,65 @@ Flavor direction:
 
 Avoid direct Harry Potter references in shipped content.
 
-### 5. Verification Table
+### 5. Verification Rug
 
-- object key: `mel-captcha-table`
-- label: `Verification Table`
-- tile coords: `26,18`
-- observed world coords: `641,451`
-- zone: `entry-hall`
+- object key: `central-rug-captcha`
+- label: `Verification Rug`
+- tile coords: `63,39`
+- observed world coords: `1518,956`
+- zone: `music-corner`
 - intent:
   - silly proximity trigger
   - fake retro anti-bot popup
   - readable world event for DM-style environmental humor
+  - sits on the walkable lip above the blocked pit tiles
 
 Recommended behavior:
 
 - trigger:
-  - stepping onto the table square
+  - stepping onto the rug/carpet square
 - free:
   - `inspect`
-  - `verify-table`
+  - `verify-rug`
 - spoofed premium-style CTA:
   - `claim-qtc-bonus`
 - result:
   - append a readable `worldEvents` row on trigger
   - append a second `worldEvents` row on answer/dismiss
-  - optionally store a lightweight knowledge takeaway in `worldFacts`
+- optionally store a lightweight knowledge takeaway in `worldFacts`
+
+### 6. Dual Stacking Screen
+
+- object key: `dual-stacking-screen`
+- label: `Dual Stacking Screen`
+- tile coords: `72,11`
+- observed world coords: `1749,274`
+- snapped interaction anchor: `1740,288`
+- zone: `private-room`
+- intent:
+  - premium educational video surface
+  - x402 paywall in-world
+  - swappable media URL for future CDN or staked media
+
+Recommended behavior:
+
+- free:
+  - `inspect`
+- paid:
+  - `Pay 1 STX to watch`
+- result:
+  - x402 payment confirms
+  - `premium-access-granted` is logged through the existing grant-access flow
+  - `dual-stacking-video-played` is appended to `worldEvents`
+  - video opens in a modal that pauses Cozy Cabin music and resumes it on close
+
+Media rule:
+
+- store `videoUrl` on the semantic object / premium offer metadata, not in a hardcoded client branch
+- current demo URL:
+  - `https://www.youtube.com/watch?v=bfWPr_qMQmc`
+- future target:
+  - replace the URL with CDN or staked media without changing the interaction pattern
 
 Metadata rule:
 
@@ -224,6 +259,7 @@ Metadata rule:
 - include `proximityCooldownMs` so the popup reads like a joke, not a spam trap
 - store `tile`, `eventBindings`, and the spoofed CTA label in `metadataJson`
 - do not attach a real `premiumOfferKey` for this first pass; the banner is intentionally fake
+- keep the pit tiles directly below the rug blocked in the Cozy Cabin collision grid for both players and NPCs
 
 ## Minimal Data Shapes
 

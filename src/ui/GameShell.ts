@@ -111,6 +111,7 @@ export class GameShell {
       this.chatPanel?.setContext(this.profile, mapName);
       this.mapEditor?.loadPlacedObjects(mapName);
       this.mapEditor?.loadPlacedItems(mapName);
+      this.hud?.setNowPlaying(game.getCurrentMusicCredit());
     };
 
     // Mode toggle (top-left) with sound button
@@ -137,6 +138,7 @@ export class GameShell {
     // HUD overlay
     this.hud = new HUD(this.mode);
     this.el.appendChild(this.hud.el);
+    this.hud.setNowPlaying(game.getCurrentMusicCredit());
 
     if (import.meta.env.DEV) {
       this.buildDebugPanel();

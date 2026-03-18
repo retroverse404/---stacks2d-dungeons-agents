@@ -58,7 +58,7 @@
 }
 
 .gns-eyebrow {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -75,7 +75,7 @@
 
 .gns-name {
   margin: 0;
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1;
@@ -83,7 +83,7 @@
 }
 
 .gns-subtitle {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--text-muted);
   font-weight: 400;
 }
@@ -105,7 +105,7 @@
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--text-muted);
   max-width: 240px;
@@ -118,7 +118,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: var(--font-ui);
@@ -176,7 +176,7 @@
 }
 
 .gns-answer-eyebrow {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -184,7 +184,7 @@
 }
 
 .gns-answer-heading {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text-primary);
@@ -195,7 +195,7 @@
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--text-secondary);
@@ -210,8 +210,8 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 16px;
   padding: 16px 20px;
-  font-size: 13px;
-  line-height: 1.75;
+  font-size: 16px;
+  line-height: 1.8;
   color: var(--text-primary);
   transition: opacity 0.2s;
 }
@@ -223,7 +223,7 @@
 }
 
 .gns-answer-footer {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.5;
 }
@@ -269,7 +269,7 @@
 }
 
 .gns-topic-eyebrow {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -279,7 +279,7 @@
 }
 
 .gns-topic-label {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.2;
@@ -309,7 +309,7 @@
 }
 
 .gns-panel-title {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -330,7 +330,7 @@
 }
 
 .gns-list-heading {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -339,7 +339,7 @@
 }
 
 .gns-list-row {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--text-primary);
   padding: 4px 0;
@@ -351,13 +351,13 @@
 }
 
 .gns-list-empty {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-muted);
   font-style: italic;
 }
 
 .gns-sync-stamp {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   margin-top: 4px;
@@ -378,7 +378,7 @@
 }
 
 .gns-premium-body {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.55;
   color: var(--text-secondary);
 }
@@ -391,7 +391,7 @@
   color: var(--text-secondary);
   border: 1px solid rgba(255, 255, 255, 0.1);
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   text-align: center;
@@ -423,7 +423,7 @@
 }
 
 .gns-clf-section-title {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -437,7 +437,7 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
   font-family: var(--font-mono);
 }
@@ -459,14 +459,14 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
   padding: 4px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .gns-clf-opp-type {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -486,7 +486,7 @@
 }
 
 .gns-clf-opp-reward {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-secondary);
   flex-shrink: 0;
   font-family: var(--font-mono);
@@ -513,7 +513,7 @@
 }
 
 .gns-footer-note {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-muted);
   opacity: 0.5;
 }

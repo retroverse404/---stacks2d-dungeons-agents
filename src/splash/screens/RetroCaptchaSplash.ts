@@ -1,15 +1,15 @@
 import type { SplashScreen, SplashScreenCallbacks } from "../SplashTypes.ts";
 import "./RetroCaptchaSplash.css";
 
-export type RetroCaptchaAnswer = "table" | "not-table" | "dismissed";
+export type RetroCaptchaAnswer = "rug" | "not-rug" | "dismissed";
 
 type VisualStyleDirection = {
-  key: "office-beige" | "shareware-blue" | "bbs-amber";
+  key: "hypercard-flat" | "stack-card" | "mono-shareware";
   label: string;
 };
 
-type TableIconIdea = {
-  key: "table-persian" | "table-checker" | "table-clipart";
+type RugIconIdea = {
+  key: "rug-persian" | "rug-runner" | "rug-braided";
   label: string;
 };
 
@@ -19,51 +19,51 @@ export type RetroCaptchaVariant = {
   ctaLabel: string;
   disclaimer: string;
   visualStyle: VisualStyleDirection;
-  tableIconIdea: TableIconIdea;
+  rugIconIdea: RugIconIdea;
 };
 
 const TITLE_BAR_VARIATIONS = [
-  "QTC Table Verifier 95",
-  "Shareware Furniture Inspector",
-  "Quantum Time Crystal Safety Check",
-  "TableScan Deluxe Registration",
+  "QTC Rug Verifier 95",
+  "RUGPULL PROTOCOL",
+  "Quantum Time Crystal Floor Check",
+  "RugScan Deluxe Registration",
   "Cozy Cabin Human Test Utility",
 ];
 
 const COPY_VARIATIONS = [
-  "You have stepped on a suspicious table-adjacent square. Please prove this is still a table.",
-  "This floor tile has been flagged by the Quantum Time Crystal Furniture Bureau. Confirm the object class.",
-  "Shareware anti-bot protection requires one furniture judgment before continuing your adventure.",
-  "Warning: scammy crystal advertisers need to know whether you can recognize a table under pressure.",
-  "One more bootstep may auto-enroll you in table futures. Verify the object and proceed responsibly.",
+  "You stepped on a suspicious rug square. Confirm the rug pull status before the Quantum Time Crystal banner advances.",
+  "This carpet tile was flagged by the Quantum Time Crystal Rug Bureau. Please verify the rug pull immediately.",
+  "Shareware anti-bot protection requires one rug pull judgment before continuing through Cozy Cabin.",
+  "Warning: scammy crystal advertisers demand proof that you can identify a rug pull under pressure.",
+  "One more footstep may enroll you in Quantum Time Crystal rug futures. Confirm the rug pull and proceed.",
 ];
 
 const CTA_LABEL_VARIATIONS = [
   "Verify Furniture",
-  "Claim Crystal Bonus",
-  "Accept Table Judgment",
-  "Confirm Organic Eyeballs",
-  "Proceed To Shareware",
+  "Confirm Rug Status",
+  "Approve Human",
+  "Collect QTC",
+  "Continue",
 ];
 
 const DISCLAIMER_VARIATIONS = [
-  "No tables were securitized during this verification.",
-  "By continuing you waive all rights to complain about fake crystal banners.",
-  "Offer void in taverns, dens, and unexplained side rooms.",
-  "Tiny print reviewed by a committee of extremely nervous modems.",
-  "This verification utility was approved by absolutely nobody.",
+  "No rugs were securitized during this monochrome check.",
+  "By continuing you accept all fake Quantum Time Crystal warnings.",
+  "Offer void in pits, parlors, and suspicious side rooms.",
+  "Tiny print reviewed by a committee of nervous disk drives.",
+  "This verifier was approved by absolutely no one.",
 ];
 
 const VISUAL_STYLE_DIRECTIONS: VisualStyleDirection[] = [
-  { key: "office-beige", label: "Office beige utility window" },
-  { key: "shareware-blue", label: "Shareware catalog nag screen" },
-  { key: "bbs-amber", label: "Late-night BBS warning panel" },
+  { key: "hypercard-flat", label: "Flat HyperCard stack window" },
+  { key: "stack-card", label: "Monochrome stack card alert" },
+  { key: "mono-shareware", label: "Shareware B/W nag panel" },
 ];
 
-const TABLE_ICON_IDEAS: TableIconIdea[] = [
-  { key: "table-persian", label: "Persian cloth sample" },
-  { key: "table-checker", label: "Checkered diner top" },
-  { key: "table-clipart", label: "Clip-art banquet table" },
+const RUG_ICON_IDEAS: RugIconIdea[] = [
+  { key: "rug-persian", label: "Persian hall runner" },
+  { key: "rug-runner", label: "Motel diamond carpet" },
+  { key: "rug-braided", label: "Braided lodge rug" },
 ];
 
 function pick<T>(items: readonly T[]): T {
@@ -77,7 +77,7 @@ export function pickRetroCaptchaVariant(): RetroCaptchaVariant {
     ctaLabel: pick(CTA_LABEL_VARIATIONS),
     disclaimer: pick(DISCLAIMER_VARIATIONS),
     visualStyle: pick(VISUAL_STYLE_DIRECTIONS),
-    tableIconIdea: pick(TABLE_ICON_IDEAS),
+    rugIconIdea: pick(RUG_ICON_IDEAS),
   };
 }
 
@@ -98,9 +98,7 @@ export function createRetroCaptchaSplash(props: RetroCaptchaSplashProps): Splash
 
   const win = document.createElement("div");
   win.className = "retro-captcha__window";
-  if (variant.visualStyle.key !== "office-beige") {
-    win.classList.add(`retro-captcha__window--${variant.visualStyle.key}`);
-  }
+  win.classList.add(`retro-captcha__window--${variant.visualStyle.key}`);
   el.appendChild(win);
 
   const titlebar = document.createElement("div");
@@ -144,7 +142,7 @@ export function createRetroCaptchaSplash(props: RetroCaptchaSplashProps): Splash
 
   const status = document.createElement("div");
   status.className = "retro-captcha__status";
-  status.textContent = `Triggered by stepping on the table square in ${zoneLabel}.`;
+  status.textContent = `Triggered by stepping on the rug in ${zoneLabel}.`;
 
   const actions = document.createElement("div");
   actions.className = "retro-captcha__actions";
@@ -203,25 +201,25 @@ export function createRetroCaptchaSplash(props: RetroCaptchaSplashProps): Splash
       }
       button.classList.add("is-selected");
       status.textContent =
-        answer === "table"
-          ? "Good instinct. The floor agrees this is very table-adjacent."
-          : "Bold claim. The room strongly suspects table activity.";
+        answer === "rug"
+          ? "Good instinct. The floor agrees this is very rug-adjacent."
+          : "Bold claim. The room strongly suspects carpet activity.";
     });
     return button;
   };
 
   options.append(
     makeOption(
-      "table",
-      "a) Table",
-      variant.tableIconIdea.label,
-      `retro-captcha__icon--${variant.tableIconIdea.key}`,
+      "rug",
+      "a) Rug pull",
+      variant.rugIconIdea.label,
+      `retro-captcha__icon--${variant.rugIconIdea.key}`,
     ),
     makeOption(
-      "not-table",
-      "b) Not a table",
-      "Beige modem decoy",
-      "retro-captcha__icon--not-table",
+      "not-rug",
+      "b) Not rug pull",
+      "Monochrome decoy object",
+      "retro-captcha__icon--not-rug",
     ),
   );
 
@@ -236,9 +234,9 @@ export function createRetroCaptchaSplash(props: RetroCaptchaSplashProps): Splash
     submitButton.disabled = true;
     dismissButton.disabled = true;
     status.textContent =
-      selected === "table"
-        ? "Verification complete. Organic table recognition detected."
-        : "Incorrect. The popup would like to remind you that this is absolutely a table.";
+      selected === "rug"
+        ? "Verification complete. Rug pull averted. Quantum Time Crystals remain stable."
+        : "Incorrect. The popup insists this square remains rug pull-adjacent.";
     resolveTimer = setTimeout(() => closeWithAnswer(selected ?? "dismissed"), 520);
   });
 

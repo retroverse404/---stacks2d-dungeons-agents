@@ -19,6 +19,14 @@ interface WorldEvent {
   timestamp: number;
 }
 
+interface EventDetails {
+  displayName?: string;
+  chatterKind?: string;
+  replyToDisplayName?: string;
+  replyToRoleKey?: string;
+  roleKey?: string;
+}
+
 interface LedgerRow {
   agentId: string;
   displayName: string;
@@ -59,6 +67,17 @@ interface CastEntry {
   binding?: { walletAddress?: string; network?: string };
 }
 
+interface SpotlightLine {
+  speaker: string;
+  text: string;
+}
+
+interface ConversationSpotlight {
+  id: string;
+  kicker: string;
+  lines: SpotlightLine[];
+}
+
 export class ChatPanel {
   readonly el: HTMLElement;
   private isOpen = false;
@@ -67,8 +86,15 @@ export class ChatPanel {
   private messagesEl: HTMLElement;
   private emptyEl: HTMLElement;
   private rosterEl: HTMLElement;
+  private chatterEl: HTMLElement;
+  private spotlightEl: HTMLElement;
   private ledgerEl: HTMLElement;
   private ledgerUnsub: (() => void) | null = null;
+  private spotlightTimer: ReturnType<typeof setTimeout> | null = null;
+  private spotlightTypingTimer: ReturnType<typeof setTimeout> | null = null;
+  private seenSpotlightEventIds = new Set<string>();
+  private spotlightQueue: ConversationSpotlight[] = [];
+  private activeSpotlightId: string | null = null;
 
   private profile: ProfileData | null = null;
   private mapName: string | null = null;
@@ -80,6 +106,7 @@ export class ChatPanel {
   private joinedAt = Date.now();
   private didHydrate = false;
   private seenEventIds = new Set<string>();
+  private castNameByAgentId = new Map<string, string>();
 
   constructor() {
     this.el = document.createElement("div");
@@ -129,6 +156,15 @@ export class ChatPanel {
     this.rosterEl.className = "chat-roster";
     this.panel.appendChild(this.rosterEl);
 
+    this.chatterEl = document.createElement("div");
+    this.chatterEl.className = "chat-chatter";
+    this.panel.appendChild(this.chatterEl);
+
+    this.spotlightEl = document.createElement("div");
+    this.spotlightEl.className = "chat-spotlight";
+    this.spotlightEl.style.display = "none";
+    this.el.appendChild(this.spotlightEl);
+
     this.ledgerEl = document.createElement("div");
     this.ledgerEl.className = "chat-ledger";
     this.panel.appendChild(this.ledgerEl);
@@ -155,8 +191,21 @@ export class ChatPanel {
     this.joinedAt = Date.now();
     this.didHydrate = false;
     this.seenEventIds.clear();
+    this.seenSpotlightEventIds.clear();
     this.unreadCount = 0;
     this.updateBadge();
+    if (this.spotlightTimer) {
+      clearTimeout(this.spotlightTimer);
+      this.spotlightTimer = null;
+    }
+    if (this.spotlightTypingTimer) {
+      clearTimeout(this.spotlightTypingTimer);
+      this.spotlightTypingTimer = null;
+    }
+    this.spotlightEl.style.display = "none";
+    this.spotlightEl.classList.remove("is-visible", "is-hiding");
+    this.spotlightQueue = [];
+    this.activeSpotlightId = null;
     this.subscribe();
     this.subscribeRoster();
     this.subscribeLedger();
@@ -307,6 +356,7 @@ export class ChatPanel {
 
   private renderRoster(cast: CastEntry[]) {
     this.rosterEl.innerHTML = "";
+    this.castNameByAgentId.clear();
     if (!cast || cast.length === 0) return;
 
     const label = document.createElement("div");
@@ -319,12 +369,16 @@ export class ChatPanel {
     this.rosterEl.appendChild(pills);
 
     for (const entry of cast) {
+      const agentId = entry.registry?.agentId;
+      const displayName = entry.registry?.displayName ?? agentId ?? "Agent";
+      if (agentId) this.castNameByAgentId.set(agentId, displayName);
+
       const pill = document.createElement("div");
       pill.className = "chat-roster-pill";
 
       const name = document.createElement("span");
       name.className = "chat-roster-name";
-      name.textContent = entry.registry?.displayName ?? entry.registry?.agentId ?? "Agent";
+      name.textContent = displayName;
 
       const mood = document.createElement("span");
       mood.className = "chat-roster-mood";
@@ -333,6 +387,8 @@ export class ChatPanel {
       pill.append(name, mood);
       pills.appendChild(pill);
     }
+
+    this.renderChatter();
   }
 
   private subscribe() {
@@ -369,12 +425,27 @@ export class ChatPanel {
           this.unreadCount += newUnread;
           this.updateBadge();
         }
+
+        const newestSpotlight = [...next]
+          .reverse()
+          .find((event) =>
+            !this.seenSpotlightEventIds.has(String(event._id)) &&
+            event.eventType.startsWith("agent-thought:"),
+          );
+        if (newestSpotlight) {
+          const spotlight = this.buildConversationSpotlight(newestSpotlight, next);
+          this.seenSpotlightEventIds.add(String(newestSpotlight._id));
+          if (spotlight) {
+            this.enqueueConversationSpotlight(spotlight);
+          }
+        }
       },
     );
   }
 
   private renderEvents() {
     this.messagesEl.innerHTML = "";
+    this.renderChatter();
 
     if (this.events.length === 0) {
       this.messagesEl.appendChild(this.emptyEl);
@@ -394,6 +465,9 @@ export class ChatPanel {
 
       const row = document.createElement("div");
       row.className = "chat-msg chat-msg--event";
+      if (event.eventType.startsWith("agent-thought:")) {
+        row.classList.add("chat-msg--chatter");
+      }
 
       const meta = document.createElement("div");
       meta.className = "chat-msg-meta";
@@ -423,7 +497,174 @@ export class ChatPanel {
     this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
   }
 
+  private renderChatter() {
+    this.chatterEl.innerHTML = "";
+
+    const chatterEvents = this.events
+      .filter((event) => event.eventType.startsWith("agent-thought:"))
+      .slice(-5)
+      .reverse();
+
+    if (chatterEvents.length === 0) return;
+
+    const header = document.createElement("div");
+    header.className = "chat-chatter-header";
+
+    const title = document.createElement("div");
+    title.className = "chat-chatter-title";
+    title.textContent = "Agent Chatter";
+
+    const subtitle = document.createElement("div");
+    subtitle.className = "chat-chatter-subtitle";
+    subtitle.textContent = "Ambient conversation happening in the room";
+
+    header.append(title, subtitle);
+    this.chatterEl.appendChild(header);
+
+    const list = document.createElement("div");
+    list.className = "chat-chatter-list";
+    this.chatterEl.appendChild(list);
+
+    for (const event of chatterEvents) {
+      const details = this.parseEventDetails(event.detailsJson);
+      const row = document.createElement("div");
+      row.className = "chat-chatter-entry";
+
+      const top = document.createElement("div");
+      top.className = "chat-chatter-top";
+
+      const speaker = document.createElement("span");
+      speaker.className = "chat-chatter-speaker";
+      speaker.textContent = this.resolveEventSpeaker(event, details);
+
+      const meta = document.createElement("span");
+      meta.className = "chat-chatter-meta";
+      meta.textContent = details.replyToDisplayName
+        ? `replying to ${details.replyToDisplayName} · ${this.formatTime(event.timestamp)}`
+        : this.formatTime(event.timestamp);
+
+      top.append(speaker, meta);
+
+      const body = document.createElement("div");
+      body.className = "chat-chatter-body";
+      body.textContent = event.summary;
+
+      row.append(top, body);
+      list.appendChild(row);
+    }
+  }
+
+  private buildConversationSpotlight(event: WorldEvent, events: WorldEvent[]) {
+    const details = this.parseEventDetails(event.detailsJson);
+    if (!details.replyToDisplayName) return null;
+    const speaker = this.resolveEventSpeaker(event, details);
+
+    const candidateEvents = [...events].reverse();
+    const counterpartEvent = details.replyToDisplayName
+      ? candidateEvents.find((candidate) => {
+        if (candidate._id === event._id) return false;
+        if (!candidate.eventType.startsWith("agent-thought:")) return false;
+        if (candidate.timestamp > event.timestamp) return false;
+        const candidateSpeaker = this.resolveEventSpeaker(candidate, this.parseEventDetails(candidate.detailsJson));
+        return candidateSpeaker === details.replyToDisplayName;
+      })
+      : null;
+    if (!counterpartEvent) return null;
+
+    const lines: SpotlightLine[] = [];
+    lines.push({
+      speaker: this.resolveEventSpeaker(counterpartEvent, this.parseEventDetails(counterpartEvent.detailsJson)),
+      text: counterpartEvent.summary,
+    });
+    lines.push({ speaker, text: event.summary });
+
+    return {
+      id: String(event._id),
+      kicker: "Conversation Nearby",
+      lines: lines.slice(-2),
+    } satisfies ConversationSpotlight;
+  }
+
+  private enqueueConversationSpotlight(spotlight: ConversationSpotlight) {
+    if (this.activeSpotlightId === spotlight.id) return;
+    if (this.spotlightQueue.some((queued) => queued.id === spotlight.id)) return;
+    this.spotlightQueue.push(spotlight);
+    if (!this.activeSpotlightId) {
+      this.showNextConversationSpotlight();
+    }
+  }
+
+  private showNextConversationSpotlight() {
+    const spotlight = this.spotlightQueue.shift();
+    if (!spotlight) {
+      this.activeSpotlightId = null;
+      return;
+    }
+    this.activeSpotlightId = spotlight.id;
+    this.showConversationSpotlight(spotlight);
+  }
+
+  private showConversationSpotlight(spotlight: ConversationSpotlight) {
+    this.spotlightEl.innerHTML = "";
+
+    const card = document.createElement("div");
+    card.className = "chat-spotlight-card";
+
+    const header = document.createElement("div");
+    header.className = "chat-spotlight-header";
+
+    const kicker = document.createElement("span");
+    kicker.className = "chat-spotlight-kicker";
+    kicker.textContent = spotlight.kicker;
+
+    const time = document.createElement("span");
+    time.className = "chat-spotlight-time";
+    time.textContent = "live";
+
+    header.append(kicker, time);
+    card.appendChild(header);
+
+    const list = document.createElement("div");
+    list.className = "chat-spotlight-list";
+    card.appendChild(list);
+
+    for (const line of spotlight.lines) {
+      const row = document.createElement("div");
+      row.className = "chat-spotlight-row";
+
+      const name = document.createElement("div");
+      name.className = "chat-spotlight-speaker";
+      name.textContent = line.speaker;
+
+      const body = document.createElement("div");
+      body.className = "chat-spotlight-text";
+      body.textContent = line.text;
+
+      row.append(name, body);
+      list.appendChild(row);
+    }
+
+    this.spotlightEl.appendChild(card);
+    this.spotlightEl.style.display = "";
+    this.spotlightEl.classList.remove("is-hiding");
+    this.spotlightEl.classList.add("is-visible");
+
+    if (this.spotlightTimer) clearTimeout(this.spotlightTimer);
+    this.spotlightTimer = setTimeout(() => {
+      this.spotlightEl.classList.remove("is-visible");
+      this.spotlightEl.classList.add("is-hiding");
+      window.setTimeout(() => {
+        if (!this.spotlightEl.classList.contains("is-visible")) {
+          this.spotlightEl.style.display = "none";
+        }
+      }, 240);
+    }, 9000);
+  }
+
   private formatEventType(eventType: string): string {
+    if (eventType.startsWith("agent-thought:")) {
+      return "Agent Chatter";
+    }
     return eventType
       .split(/[-_]/g)
       .filter(Boolean)
@@ -432,6 +673,9 @@ export class ChatPanel {
   }
 
   private formatScope(event: WorldEvent): string {
+    if (event.eventType.startsWith("agent-thought:")) {
+      return this.resolveEventSpeaker(event, this.parseEventDetails(event.detailsJson));
+    }
     const parts: string[] = [];
     if (event.zoneKey) parts.push(event.zoneKey);
     if (event.objectKey) parts.push(event.objectKey);
@@ -441,6 +685,22 @@ export class ChatPanel {
   private formatTime(ts: number): string {
     const d = new Date(ts);
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  private parseEventDetails(detailsJson?: string) {
+    if (!detailsJson) return {} as EventDetails;
+    try {
+      return JSON.parse(detailsJson) as EventDetails;
+    } catch {
+      return {} as EventDetails;
+    }
+  }
+
+  private resolveEventSpeaker(event: WorldEvent, details: EventDetails) {
+    return details.displayName
+      ?? (event.actorId ? this.castNameByAgentId.get(event.actorId) : null)
+      ?? event.actorId
+      ?? "Agent";
   }
 
   private shortenAddress(address: string | null | undefined): string {
@@ -510,6 +770,7 @@ export class ChatPanel {
     this.unsub?.();
     this.rosterUnsub?.();
     this.ledgerUnsub?.();
+    if (this.spotlightTimer) clearTimeout(this.spotlightTimer);
     this.el.remove();
   }
 }

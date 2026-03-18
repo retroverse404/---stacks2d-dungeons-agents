@@ -12,6 +12,14 @@ export interface SfxHandle {
   stop(): void;
 }
 
+export interface MusicPlaybackSnapshot {
+  url: string;
+  offsetSeconds: number;
+  volume: number;
+  muted: boolean;
+  wasPlaying: boolean;
+}
+
 export class AudioManager {
   private audioContext: AudioContext | null = null;
   private gainNode: GainNode | null = null;      // master music gain
@@ -22,6 +30,9 @@ export class AudioManager {
   private _muted = false;
   private _playing = false;
   private _started = false;
+  private currentUrl: string | null = null;
+  private playbackStartedAt = 0;
+  private pausedOffset = 0;
 
   /** Cache of decoded audio buffers by URL */
   private bufferCache = new Map<string, AudioBuffer>();
@@ -52,8 +63,10 @@ export class AudioManager {
     }
   }
 
-  async loadAndPlay(url: string) {
+  async loadAndPlay(url: string, startAtSeconds = 0) {
     this._playing = true;
+    this.currentUrl = url;
+    this.pausedOffset = Math.max(0, startAtSeconds);
 
     // Stop any current music
     this.stopPlayback();
@@ -72,14 +85,28 @@ export class AudioManager {
 
       this.currentBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
       if (this._playing) {
-        this.startPlayback();
+        this.startPlayback(this.pausedOffset);
       }
     } catch (err) {
       console.warn("Failed to load audio:", url, err);
     }
   }
 
-  private startPlayback() {
+  private getCurrentOffsetSeconds() {
+    if (!this.audioContext || !this.currentBuffer) {
+      return this.pausedOffset;
+    }
+    if (!this.currentSource) {
+      return this.pausedOffset;
+    }
+    const duration = this.currentBuffer.duration || 0;
+    if (duration <= 0) return this.pausedOffset;
+    const elapsed = this.audioContext.currentTime - this.playbackStartedAt;
+    const offset = elapsed % duration;
+    return Number.isFinite(offset) ? offset : this.pausedOffset;
+  }
+
+  private startPlayback(startAtSeconds = 0) {
     if (!this.audioContext || !this.gainNode || !this.currentBuffer) return;
 
     this.stopPlayback();
@@ -88,8 +115,15 @@ export class AudioManager {
     source.buffer = this.currentBuffer;
     source.loop = true;
     source.connect(this.gainNode);
-    source.start(0);
+    const duration = this.currentBuffer.duration || 0;
+    const safeOffset =
+      duration > 0
+        ? ((Math.max(0, startAtSeconds) % duration) + duration) % duration
+        : 0;
+    source.start(0, safeOffset);
     this.currentSource = source;
+    this.pausedOffset = safeOffset;
+    this.playbackStartedAt = this.audioContext.currentTime - safeOffset;
   }
 
   private stopPlayback() {
@@ -106,7 +140,24 @@ export class AudioManager {
 
   stop() {
     this._playing = false;
+    this.pausedOffset = 0;
     this.stopPlayback();
+  }
+
+  pause() {
+    this.pausedOffset = this.getCurrentOffsetSeconds();
+    this._playing = false;
+    this.stopPlayback();
+  }
+
+  async resume() {
+    if (!this.currentUrl || !this.currentBuffer) return;
+    this._playing = true;
+    if (!this.audioContext) {
+      await this.loadAndPlay(this.currentUrl, this.pausedOffset);
+      return;
+    }
+    this.startPlayback(this.pausedOffset);
   }
 
   get volume() {
@@ -123,19 +174,61 @@ export class AudioManager {
     return this._muted;
   }
 
-  toggleMute() {
-    this._muted = !this._muted;
+  setMuted(next: boolean) {
+    this._muted = !!next;
     if (this.gainNode) {
       this.gainNode.gain.value = this._muted ? 0 : this._volume;
     }
     if (this.sfxGainNode) {
       this.sfxGainNode.gain.value = this._muted ? 0 : 1;
     }
+  }
+
+  toggleMute() {
+    this.setMuted(!this._muted);
     return this._muted;
   }
 
   get isStarted() {
     return this._started;
+  }
+
+  capturePlaybackSnapshot(): MusicPlaybackSnapshot | null {
+    if (!this.currentUrl) return null;
+    return {
+      url: this.currentUrl,
+      offsetSeconds: this.getCurrentOffsetSeconds(),
+      volume: this._volume,
+      muted: this._muted,
+      wasPlaying: this._playing || !!this.currentSource,
+    };
+  }
+
+  async restorePlaybackSnapshot(snapshot: MusicPlaybackSnapshot | null) {
+    if (!snapshot) return;
+    this.volume = snapshot.volume;
+    this.setMuted(snapshot.muted);
+    if (this.currentUrl !== snapshot.url || !this.currentBuffer) {
+      await this.loadAndPlay(snapshot.url, snapshot.offsetSeconds);
+      if (!snapshot.wasPlaying) {
+        this.pause();
+      }
+      return;
+    }
+
+    this.pausedOffset = Math.max(0, snapshot.offsetSeconds);
+    if (snapshot.wasPlaying) {
+      this._playing = true;
+      if (!this.audioContext) {
+        await this.loadAndPlay(snapshot.url, snapshot.offsetSeconds);
+      } else {
+        this.startPlayback(snapshot.offsetSeconds);
+      }
+      return;
+    }
+
+    this._playing = false;
+    this.stopPlayback();
   }
 
   // =========================================================================

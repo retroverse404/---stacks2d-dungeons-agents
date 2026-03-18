@@ -27,6 +27,7 @@ const AIBTC_TEMPLATE_SOURCE = "aibtc-template";
 const BITFLOW_TUTORIAL_SOURCE = "bitflow-tutorial-1";
 const MARKET_OFFER_KEY = "market-btc-live-quote";
 const BOOKSHELF_OFFER_KEY = "cozy-cabin-bookshelf-brief";
+const DUAL_STACKING_VIDEO_OFFER_KEY = "cozy-cabin-dual-stacking-video";
 const WAX_CYLINDER_OFFER_KEY = "cozy-cabin-wax-cylinder-memory";
 const QUESTS_SPRITE_DEF = "local-quests-npc";
 const QUESTS_INSTANCE = "quests-btc";
@@ -34,6 +35,22 @@ const MEL_SPRITE_DEF = "local-mel-npc";
 const MEL_INSTANCE = "mel-curator";
 const PHONO_SPRITE_DEF = "cozy-cabin-phonograph";
 const PHONO_OBJECT_KEY = "phonograph-player";
+const DUAL_STACKING_VIDEO_URL = "https://www.youtube.com/watch?v=bfWPr_qMQmc";
+const COZY_CABIN_PIT_BLOCK_TILES: ReadonlyArray<readonly [number, number]> = [
+  [62, 40],
+  [63, 40],
+  [64, 40],
+  [62, 41],
+  [63, 41],
+  [64, 41],
+  [62, 42],
+  [63, 42],
+  [64, 42],
+];
+const COZY_CABIN_PASSAGE_CLEAR_TILES: ReadonlyArray<readonly [number, number]> = [
+  ...Array.from({ length: 10 }, (_, offset) => [67, 17 + offset] as [number, number]),
+  ...Array.from({ length: 10 }, (_, offset) => [68, 17 + offset] as [number, number]),
+];
 
 async function upsertZone(
   ctx: any,
@@ -111,6 +128,65 @@ async function deleteSemanticObject(ctx: any, mapName: string, objectKey: string
   if (existing) {
     await ctx.db.delete(existing._id);
   }
+}
+
+function updateCollisionMaskTiles(
+  collisionMask: string | undefined,
+  width: number,
+  height: number,
+  blockedTiles: ReadonlyArray<readonly [number, number]>,
+  clearTiles: ReadonlyArray<readonly [number, number]> = [],
+) {
+  const total = Math.max(0, width * height);
+  let mask: boolean[];
+  try {
+    const parsed = collisionMask ? JSON.parse(collisionMask) : null;
+    mask = Array.isArray(parsed) ? parsed.map(Boolean) : [];
+  } catch {
+    mask = [];
+  }
+
+  if (mask.length !== total) {
+    mask = Array.from({ length: total }, (_, index) => Boolean(mask[index]));
+  }
+
+  let changed = false;
+  for (const [tileX, tileY] of clearTiles) {
+    if (
+      tileX < 0 ||
+      tileY < 0 ||
+      tileX >= width ||
+      tileY >= height
+    ) {
+      continue;
+    }
+    const index = tileY * width + tileX;
+    if (mask[index]) {
+      mask[index] = false;
+      changed = true;
+    }
+  }
+
+  for (const [tileX, tileY] of blockedTiles) {
+    if (
+      tileX < 0 ||
+      tileY < 0 ||
+      tileX >= width ||
+      tileY >= height
+    ) {
+      continue;
+    }
+    const index = tileY * width + tileX;
+    if (!mask[index]) {
+      mask[index] = true;
+      changed = true;
+    }
+  }
+
+  return {
+    changed,
+    collisionMask: JSON.stringify(mask),
+  };
 }
 
 async function upsertNpcRole(
@@ -437,6 +513,26 @@ export const ensureDemoNpc = mutation({
     }
     const resolvedMap = map!;
     const targetMap = resolvedMap.name;
+    const isCozyCabin =
+      targetMap === DEMO_MAP ||
+      targetMap === "cozy-cabin" ||
+      targetMap === "Cozy Cabin";
+
+    if (isCozyCabin) {
+      const nextCollision = updateCollisionMaskTiles(
+        resolvedMap.collisionMask,
+        resolvedMap.width,
+        resolvedMap.height,
+        COZY_CABIN_PIT_BLOCK_TILES,
+        COZY_CABIN_PASSAGE_CLEAR_TILES,
+      );
+      if (nextCollision.changed) {
+        await ctx.db.patch(resolvedMap._id, {
+          collisionMask: nextCollision.collisionMask,
+          updatedAt: Date.now(),
+        });
+      }
+    }
 
     const userId = await getRequestUserId(ctx);
     const now = Date.now();
@@ -921,8 +1017,8 @@ export const ensureDemoNpc = mutation({
 
     let traderObject = existingObjects.find((o) => o.instanceName === DEMO_TRADER_INSTANCE) ?? undefined;
     if (!traderObject) {
-      const tileX = 38;
-      const tileY = 13;
+      const tileX = 35;
+      const tileY = 11;
       const objectId = await ctx.db.insert("mapObjects", {
         mapName: targetMap,
         spriteDefName: DEMO_TRADER_DEF,
@@ -934,15 +1030,15 @@ export const ensureDemoNpc = mutation({
       });
       traderObject = (await ctx.db.get(objectId)) ?? undefined;
     } else if (
-      traderObject.x !== 38 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
-      traderObject.y !== 13 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
+      traderObject.x !== 35 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
+      traderObject.y !== 11 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
       traderObject.layer !== 1 ||
       traderObject.spriteDefName !== DEMO_TRADER_DEF
     ) {
       await ctx.db.patch(traderObject._id, {
         spriteDefName: DEMO_TRADER_DEF,
-        x: 38 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
-        y: 13 * resolvedMap.tileHeight + resolvedMap.tileHeight,
+        x: 35 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
+        y: 11 * resolvedMap.tileHeight + resolvedMap.tileHeight,
         layer: 1,
         updatedAt: now,
       });
@@ -951,7 +1047,7 @@ export const ensureDemoNpc = mutation({
 
     let marketObject = existingObjects.find((o) => o.instanceName === MARKET_INSTANCE) ?? undefined;
     if (!marketObject) {
-      const tileX = 33;
+      const tileX = 34;
       const tileY = 13;
       const objectId = await ctx.db.insert("mapObjects", {
         mapName: targetMap,
@@ -964,14 +1060,14 @@ export const ensureDemoNpc = mutation({
       });
       marketObject = (await ctx.db.get(objectId)) ?? undefined;
     } else if (
-      marketObject.x !== 33 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
+      marketObject.x !== 34 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
       marketObject.y !== 13 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
       marketObject.layer !== 1 ||
       marketObject.spriteDefName !== MARKET_SPRITE_DEF
     ) {
       await ctx.db.patch(marketObject._id, {
         spriteDefName: MARKET_SPRITE_DEF,
-        x: 33 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
+        x: 34 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
         y: 13 * resolvedMap.tileHeight + resolvedMap.tileHeight,
         layer: 1,
         updatedAt: now,
@@ -1254,6 +1350,55 @@ export const ensureDemoNpc = mutation({
       await ctx.db.insert("premiumContentOffers", bookshelfOfferPayload);
     }
 
+    const existingDualStackingVideoOffer = await ctx.db
+      .query("premiumContentOffers")
+      .withIndex("by_offerKey", (q) => q.eq("offerKey", DUAL_STACKING_VIDEO_OFFER_KEY))
+      .first();
+
+    const dualStackingVideoOfferPayload = {
+      offerKey: DUAL_STACKING_VIDEO_OFFER_KEY,
+      agentId: DEMO_INSTANCE,
+      title: "Dual stacking video lesson",
+      description:
+        "Unlock a premium dual stacking explainer from the east-room screen without leaving the Cozy Cabin world.",
+      provider: "x402-stacks",
+      priceAsset: "STX",
+      priceAmount: "1",
+      network: "testnet",
+      endpointPath: "/api/premium/guide-btc/dual-stacking-video",
+      mapName: targetMap,
+      zoneKey: "private-room",
+      objectKey: "dual-stacking-screen",
+      sourceType: "interactable",
+      deliveryType: "video",
+      unlockEventType: "dual-stacking-video-played",
+      unlockFactKey: "cozy-cabin:dual-stacking-video:premium-unlocked",
+      resourceId: DUAL_STACKING_VIDEO_OFFER_KEY,
+      receiverAddress: GUIDE_TESTNET_EXECUTION_ADDRESS,
+      status: "active",
+      metadataJson: JSON.stringify({
+        mapName: targetMap,
+        zoneKey: "private-room",
+        objectKey: "dual-stacking-screen",
+        delivery: "video",
+        unlockEventType: "dual-stacking-video-played",
+        unlockFactKey: "cozy-cabin:dual-stacking-video:premium-unlocked",
+        resourceId: DUAL_STACKING_VIDEO_OFFER_KEY,
+        sourceType: "interactable",
+        videoUrl: DUAL_STACKING_VIDEO_URL,
+        videoProvider: "youtube",
+        videoTitle: "Dual Stacking on Bitcoin",
+        pauseWorldMusic: true,
+      }),
+      updatedAt: now,
+    };
+
+    if (existingDualStackingVideoOffer) {
+      await ctx.db.patch(existingDualStackingVideoOffer._id, dualStackingVideoOfferPayload);
+    } else {
+      await ctx.db.insert("premiumContentOffers", dualStackingVideoOfferPayload);
+    }
+
     const existingWaxCylinderOffer = await ctx.db
       .query("premiumContentOffers")
       .withIndex("by_offerKey", (q) => q.eq("offerKey", WAX_CYLINDER_OFFER_KEY))
@@ -1367,25 +1512,25 @@ export const ensureDemoNpc = mutation({
       mapName: targetMap,
       zoneKey: "merchant-corner",
       name: "Merchant Corner",
-      description: "The local trade and gossip area for Toma and future offers.",
+      description: "A study-wing trading nook beside the bookshelf where Toma can gossip and barter.",
       zoneType: "trade",
-      x: 28,
+      x: 33,
       y: 9,
-      width: 3,
-      height: 3,
-      tags: ["trade", "merchant", "offers", "social"],
+      width: 8,
+      height: 5,
+      tags: ["trade", "merchant", "offers", "social", "books"],
       accessType: "public",
     });
     await upsertZone(ctx, {
       mapName: targetMap,
       zoneKey: "market-station",
       name: "Market Station",
-      description: "A small analytics and pricing zone for market.btc and future token screens.",
+      description: "A small analytics alcove where market.btc can stand at the desk but still step onto open floor.",
       zoneType: "market",
-      x: 30,
-      y: 9,
-      width: 3,
-      height: 3,
+      x: 33,
+      y: 12,
+      width: 4,
+      height: 6,
       tags: ["market", "analytics", "prices", "signals"],
       accessType: "public",
     });
@@ -1452,6 +1597,19 @@ export const ensureDemoNpc = mutation({
       width: 16,
       height: 15,
       tags: ["study", "books", "tools", "lore", "public"],
+      accessType: "public",
+    });
+    await upsertZone(ctx, {
+      mapName: targetMap,
+      zoneKey: "private-room",
+      name: "Private Room",
+      description: "An east-room study chamber for premium lessons, quiet media, and invite-only knowledge surfaces.",
+      zoneType: "study",
+      x: 66,
+      y: 8,
+      width: 11,
+      height: 10,
+      tags: ["private", "study", "video", "knowledge", "public"],
       accessType: "public",
     });
     await upsertZone(ctx, {
@@ -1645,6 +1803,51 @@ export const ensureDemoNpc = mutation({
     });
     await upsertSemanticObject(ctx, {
       mapName: targetMap,
+      objectKey: "dual-stacking-screen",
+      label: "Dual Stacking Screen",
+      objectType: "video-terminal",
+      sourceType: "scene",
+      zoneKey: "private-room",
+      x: 1740,
+      y: 288,
+      tags: ["video", "bitcoin", "sbtc", "dual-stacking", "education", "premium"],
+      affordances: ["inspect", "watch"],
+      valueClass: "premium",
+      triggerType: "interact",
+      freeActions: ["inspect"],
+      paidActions: ["Pay 1 STX to watch"],
+      premiumOfferKey: DUAL_STACKING_VIDEO_OFFER_KEY,
+      interactionPrompt: "Inspect video screen",
+      interactionSummary: "A locked lesson on dual stacking and Bitcoin yield hums quietly in the east room.",
+      inspectEventType: "dual-stacking-screen-inspected",
+      interactEventType: "dual-stacking-screen-inspected",
+      paidEventType: "dual-stacking-video-played",
+      roomLabel: "private-room",
+      metadataJson: JSON.stringify({
+        tile: { x: 72, y: 11 },
+        trigger: "interact",
+        freeActions: ["inspect"],
+        paidActions: ["Pay 1 STX to watch"],
+        interactionPrompt: "Inspect video screen",
+        interactionSummary: "A locked lesson on dual stacking and Bitcoin yield hums quietly in the east room.",
+        eventBindings: {
+          inspect: "dual-stacking-screen-inspected",
+          interact: "dual-stacking-screen-inspected",
+          paid: "dual-stacking-video-played",
+        },
+        premiumOfferKey: DUAL_STACKING_VIDEO_OFFER_KEY,
+        roomLabel: "private-room",
+        videoUrl: DUAL_STACKING_VIDEO_URL,
+        videoProvider: "youtube",
+        videoTitle: "Dual Stacking on Bitcoin",
+        pauseWorldMusic: true,
+        navAnchor: { x: 1740, y: 288, label: "Dual Stacking Screen" },
+        notes:
+          "Premium educational video surface at Cozy Cabin tile 72,11. The media URL should stay swappable so future CDN-hosted or staked media can replace YouTube without changing the interaction pattern.",
+      }),
+    });
+    await upsertSemanticObject(ctx, {
+      mapName: targetMap,
       objectKey: "broom-stand",
       label: "Broom",
       objectType: "tool",
@@ -1693,13 +1896,30 @@ export const ensureDemoNpc = mutation({
       objectType: "terminal",
       sourceType: "virtual",
       zoneKey: "market-station",
-      x: 804, y: 408, // anchor SOUTH of market-post (804,336) to keep the market surface away from the HUD lane
+      x: 828, y: 408, // keep the board aligned with the desk while leaving one step of walkable range
       tags: ["prices", "analytics", "market", "display"],
       affordances: ["inspect", "query"],
       valueClass: "utility",
       metadataJson: JSON.stringify({
-        navAnchor: { x: 804, y: 408, label: "Price Board" },
+        navAnchor: { x: 828, y: 408, label: "Price Board" },
         note: "Tenero-backed market display surface.",
+      }),
+    });
+    await upsertSemanticObject(ctx, {
+      mapName: targetMap,
+      objectKey: "market-aisle",
+      label: "Market Aisle",
+      objectType: "walk-surface",
+      sourceType: "virtual",
+      zoneKey: "market-station",
+      x: 876,
+      y: 336,
+      tags: ["market", "floor", "pacing", "signals"],
+      affordances: ["inspect"],
+      valueClass: "utility",
+      metadataJson: JSON.stringify({
+        navAnchor: { x: 876, y: 336, label: "Market Aisle" },
+        note: "Open floor anchor beside market.btc so the analyst can pace without leaving the market station.",
       }),
     });
     await upsertSemanticObject(ctx, {
@@ -1741,13 +1961,13 @@ export const ensureDemoNpc = mutation({
       objectType: "trade-surface",
       sourceType: "virtual",
       zoneKey: "merchant-corner",
-      x: 924, y: 408, // anchor SOUTH of merchant-post (924,336) to keep Toma's route clear of the HUD
-      tags: ["trade", "offers", "merchant"],
+      x: 936, y: 288, // bookshelf-side trade surface so Toma stays near the study books
+      tags: ["trade", "offers", "merchant", "books"],
       affordances: ["trade", "inspect"],
       valueClass: "trade",
       metadataJson: JSON.stringify({
-        navAnchor: { x: 924, y: 408, label: "Trade Corner" },
-        note: "Trade surface for Toma's patrol route.",
+        navAnchor: { x: 936, y: 288, label: "Trade Corner" },
+        note: "Bookshelf-side trade surface for Toma's patrol route.",
       }),
     });
     // Mel curation zone and objects
@@ -1793,47 +2013,47 @@ export const ensureDemoNpc = mutation({
         note: "Mel's paid curation surface — premium signal via x402.",
       }),
     });
+    await deleteSemanticObject(ctx, targetMap, "mel-captcha-table");
     await upsertSemanticObject(ctx, {
       mapName: targetMap,
-      objectKey: "mel-captcha-table",
-      label: "Verification Table",
+      objectKey: "central-rug-captcha",
+      label: "Verification Rug",
       objectType: "verification-surface",
       sourceType: "scene",
-      zoneKey: "entry-hall",
-      x: 641,
-      y: 451,
-      tags: ["captcha", "table", "qtc", "shareware", "mel"],
+      zoneKey: "music-corner",
+      x: 1518,
+      y: 956,
+      tags: ["captcha", "rug", "carpet", "qtc", "shareware"],
       affordances: ["inspect", "verify", "dismiss"],
       valueClass: "premium",
-      linkedAgentId: MEL_INSTANCE,
       triggerType: "proximity",
-      freeActions: ["inspect", "verify-table"],
+      freeActions: ["inspect", "verify-rug"],
       paidActions: ["claim-qtc-bonus"],
-      interactionPrompt: "Prove this is a table",
+      interactionPrompt: "Prove this is a rug",
       interactionSummary:
-        "A fake anti-bot window bursts from the table square with a scammy Quantum Time Crystal banner.",
-      inspectEventType: "captcha-table-triggered",
-      interactEventType: "captcha-table-answered",
-      roomLabel: "entry-hall",
+        "A fake anti-bot window bursts from the central rug with a scammy Quantum Time Crystal banner.",
+      inspectEventType: "captcha-rug-triggered",
+      interactEventType: "captcha-rug-answered",
+      roomLabel: "music-corner",
       metadataJson: JSON.stringify({
-        tile: { x: 26, y: 18 },
+        tile: { x: 63, y: 39 },
         trigger: "proximity",
         proximityCooldownMs: 45000,
         oncePerSession: false,
-        freeActions: ["inspect", "verify-table"],
+        freeActions: ["inspect", "verify-rug"],
         paidActions: ["claim-qtc-bonus"],
-        interactionPrompt: "Prove this is a table",
+        interactionPrompt: "Prove this is a rug",
         interactionSummary:
-          "A fake anti-bot window bursts from the table square with a scammy Quantum Time Crystal banner.",
+          "A fake anti-bot window bursts from the central rug with a scammy Quantum Time Crystal banner.",
         eventBindings: {
-          inspect: "captcha-table-triggered",
-          interact: "captcha-table-answered",
+          inspect: "captcha-rug-triggered",
+          interact: "captcha-rug-answered",
         },
         premiumOfferKey: null,
-        roomLabel: "entry-hall",
-        navAnchor: { x: 641, y: 451, label: "Verification Table" },
+        roomLabel: "music-corner",
+        navAnchor: { x: 1518, y: 956, label: "Verification Rug" },
         notes:
-          "Retro shareware prank surface near Mel's table. Triggered by stepping onto the square; fake CTA only, no live paid rail attached.",
+          "Retro shareware prank surface on the Cozy Cabin rug. The pit tiles directly below are intentionally blocked in the Cozy Cabin collision grid.",
       }),
     });
     await upsertSemanticObject(ctx, {
@@ -1930,7 +2150,7 @@ export const ensureDemoNpc = mutation({
       permissions: ["trade", "offer", "gossip"],
       metadataJson: JSON.stringify({
         anchorObjectKey: "trade-corner",
-        routeObjectKeys: ["merchant-post", "trade-corner", "coffee-service", "bookshelf-lore"],
+        routeObjectKeys: ["merchant-post", "trade-corner"],
         primaryTopics: ["trade", "supplies", "rumors"],
       }),
     });
@@ -1945,7 +2165,7 @@ export const ensureDemoNpc = mutation({
       permissions: ["quote", "analyze", "surface-signals"],
       metadataJson: JSON.stringify({
         anchorObjectKey: "price-board",
-        routeObjectKeys: ["market-post", "price-board", "trade-corner", "bookshelf-lore"],
+        routeObjectKeys: ["market-post", "price-board", "market-aisle"],
         primaryTopics: ["prices", "analytics", "sBTC", "STX", "USDCx"],
       }),
     });

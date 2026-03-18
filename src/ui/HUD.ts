@@ -9,6 +9,12 @@ import "./HUD.css";
 const teneroApi: any = (api as any)["integrations/tenero"];
 const TICKER_REFRESH_MAX_AGE_MS = 5 * 60 * 1000;
 
+export type HudNowPlaying = {
+  title: string;
+  artist: string;
+  context?: string;
+} | null;
+
 function formatAgeLabel(ageMs?: number | null) {
   if (typeof ageMs !== "number" || !Number.isFinite(ageMs) || ageMs < 0) return "";
   const minutes = Math.floor(ageMs / 60000);
@@ -19,20 +25,27 @@ function formatAgeLabel(ageMs?: number | null) {
 
 export class HUD {
   readonly el: HTMLElement;
+  private topRow: HTMLElement;
   private label: HTMLElement;
   private tickerViewport: HTMLElement;
   private tickerTrack: HTMLElement;
   private tickerSource: HTMLElement;
+  private nowPlayingEl: HTMLElement;
+  private nowPlayingMeta: HTMLElement;
   private unsub: (() => void) | null = null;
 
   constructor(mode: AppMode) {
     this.el = document.createElement("div");
     this.el.className = "hud";
 
+    this.topRow = document.createElement("div");
+    this.topRow.className = "hud-top";
+    this.el.appendChild(this.topRow);
+
     this.label = document.createElement("div");
     this.label.className = "hud-mode-label";
     this.label.textContent = `${mode.toUpperCase()} MODE`;
-    this.el.appendChild(this.label);
+    this.topRow.appendChild(this.label);
 
     const ticker = document.createElement("div");
     ticker.className = "hud-ticker";
@@ -51,13 +64,37 @@ export class HUD {
     this.tickerSource.textContent = "Market feed";
 
     ticker.append(this.tickerViewport, this.tickerSource);
-    this.el.appendChild(ticker);
+    this.topRow.appendChild(ticker);
+
+    this.nowPlayingEl = document.createElement("div");
+    this.nowPlayingEl.className = "hud-now-playing";
+
+    const nowPlayingLabel = document.createElement("div");
+    nowPlayingLabel.className = "hud-now-playing-label";
+    nowPlayingLabel.textContent = "Now Playing";
+
+    this.nowPlayingMeta = document.createElement("div");
+    this.nowPlayingMeta.className = "hud-now-playing-meta";
+    this.nowPlayingMeta.textContent = "Ambient soundtrack";
+
+    this.nowPlayingEl.append(nowPlayingLabel, this.nowPlayingMeta);
+    this.el.appendChild(this.nowPlayingEl);
 
     this.subscribeTicker();
   }
 
   setMode(mode: AppMode) {
     this.label.textContent = `${mode.toUpperCase()} MODE`;
+  }
+
+  setNowPlaying(nowPlaying: HudNowPlaying) {
+    if (!nowPlaying) {
+      this.nowPlayingEl.style.display = "none";
+      return;
+    }
+    this.nowPlayingEl.style.display = "";
+    const context = nowPlaying.context ? `${nowPlaying.context} · ` : "";
+    this.nowPlayingMeta.textContent = `${context}${nowPlaying.title} · ${nowPlaying.artist}`;
   }
 
   private subscribeTicker() {

@@ -292,7 +292,11 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_factKey", ["factKey"])
-    .index("by_map_factKey", ["mapName", "factKey"]),
+    .index("by_map_factKey", ["mapName", "factKey"])
+    .index("by_scope_subject", ["scope", "subjectId"])
+    .index("by_map_scope_subject", ["mapName", "scope", "subjectId"])
+    .index("by_scope_subject_factKey", ["scope", "subjectId", "factKey"])
+    .index("by_map_scope_subject_factKey", ["mapName", "scope", "subjectId", "factKey"]),
 
   worldEvents: defineTable({
     mapName: v.optional(v.string()),

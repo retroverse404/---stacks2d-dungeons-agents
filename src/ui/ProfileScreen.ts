@@ -21,6 +21,9 @@ const DEFAULT_PROFILE_BACKGROUND_VIDEO_URL = "/assets/Video%20Loops/DnA2A.webm";
 const DEFAULT_PROFILE_SOUNDTRACK_URL = "/assets/audio/Opening%20To%20Profion%27s%20Dungeon.mp3";
 const DEFAULT_PROFILE_SOUNDTRACK_TITLE = "Opening To Profion's Dungeon";
 const DEFAULT_PROFILE_SOUNDTRACK_ARTIST = "Justin Caine Burnett";
+const COZY_CABIN_THEME_TITLE = "Nardis (HipHop Remix)";
+const COZY_CABIN_THEME_ARTIST = "Jackie Coleman";
+const DEFAULT_PLAYER_PROFILE_NAME = "trip";
 const CANONICAL_START_WORLD = "Cozy Cabin";
 
 // Available character sprites the player can pick from
@@ -88,6 +91,7 @@ export class ProfileScreen {
   private subEl: HTMLElement | null = null;
   private walletStatusEl: HTMLElement | null = null;
   private soundtrackStatusEl: HTMLElement | null = null;
+  private soundtrackCreditEl: HTMLElement | null = null;
   private soundtrackToggleBtn: HTMLButtonElement | null = null;
   private soundtrackAudio: HTMLAudioElement | null = null;
   private soundtrackNeedsGesture = false;
@@ -274,6 +278,10 @@ export class ProfileScreen {
     this.soundtrackStatusEl = document.createElement("div");
     this.soundtrackStatusEl.className = "profile-soundtrack-status";
     soundtrackMeta.appendChild(this.soundtrackStatusEl);
+
+    this.soundtrackCreditEl = document.createElement("div");
+    this.soundtrackCreditEl.className = "profile-soundtrack-credit";
+    soundtrackMeta.appendChild(this.soundtrackCreditEl);
 
     this.soundtrackToggleBtn = document.createElement("button");
     this.soundtrackToggleBtn.className = "profile-soundtrack-toggle";
@@ -567,6 +575,7 @@ export class ProfileScreen {
     this.nameInput = document.createElement("input");
     this.nameInput.type = "text";
     this.nameInput.placeholder = "Agent name";
+    this.nameInput.value = DEFAULT_PLAYER_PROFILE_NAME;
     this.nameInput.maxLength = 24;
     nameField.append(nameLabel, this.nameInput);
     form.appendChild(nameField);
@@ -649,7 +658,11 @@ export class ProfileScreen {
     if (this.listEl) this.listEl.style.display = "none";
     if (this.formEl) this.formEl.style.display = "";
     this.loadStartMaps();
-    this.nameInput?.focus();
+    if (this.nameInput) {
+      this.nameInput.value = DEFAULT_PLAYER_PROFILE_NAME;
+      this.nameInput.focus();
+      this.nameInput.select();
+    }
   }
 
   private hideCreateForm() {
@@ -1375,6 +1388,11 @@ export class ProfileScreen {
         detail = `${detail} · tap anywhere for sound`;
       }
       this.soundtrackStatusEl.textContent = detail;
+    }
+
+    if (this.soundtrackCreditEl) {
+      this.soundtrackCreditEl.textContent =
+        `Cozy Cabin theme: ${COZY_CABIN_THEME_TITLE} · ${COZY_CABIN_THEME_ARTIST}`;
     }
 
     if (this.soundtrackToggleBtn) {
