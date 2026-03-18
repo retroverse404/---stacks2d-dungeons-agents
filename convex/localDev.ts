@@ -891,8 +891,8 @@ export const ensureDemoNpc = mutation({
       }
     }
     if (!demoObject) {
-      const tileX = 25;
-      const tileY = 10;
+      const tileX = 28;
+      const tileY = 13;
       const objectId = await ctx.db.insert("mapObjects", {
         mapName: targetMap,
         spriteDefName: DEMO_SPRITE_DEF,
@@ -904,15 +904,15 @@ export const ensureDemoNpc = mutation({
       });
       demoObject = (await ctx.db.get(objectId)) ?? undefined;
     } else if (
-      demoObject.x !== 25 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
-      demoObject.y !== 10 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
+      demoObject.x !== 28 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
+      demoObject.y !== 13 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
       demoObject.layer !== 1 ||
       demoObject.spriteDefName !== DEMO_SPRITE_DEF
     ) {
       await ctx.db.patch(demoObject._id, {
         spriteDefName: DEMO_SPRITE_DEF,
-        x: 25 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
-        y: 10 * resolvedMap.tileHeight + resolvedMap.tileHeight,
+        x: 28 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
+        y: 13 * resolvedMap.tileHeight + resolvedMap.tileHeight,
         layer: 1,
         updatedAt: now,
       });
@@ -921,8 +921,8 @@ export const ensureDemoNpc = mutation({
 
     let traderObject = existingObjects.find((o) => o.instanceName === DEMO_TRADER_INSTANCE) ?? undefined;
     if (!traderObject) {
-      const tileX = 29;
-      const tileY = 10;
+      const tileX = 38;
+      const tileY = 13;
       const objectId = await ctx.db.insert("mapObjects", {
         mapName: targetMap,
         spriteDefName: DEMO_TRADER_DEF,
@@ -934,15 +934,15 @@ export const ensureDemoNpc = mutation({
       });
       traderObject = (await ctx.db.get(objectId)) ?? undefined;
     } else if (
-      traderObject.x !== 29 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
-      traderObject.y !== 10 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
+      traderObject.x !== 38 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
+      traderObject.y !== 13 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
       traderObject.layer !== 1 ||
       traderObject.spriteDefName !== DEMO_TRADER_DEF
     ) {
       await ctx.db.patch(traderObject._id, {
         spriteDefName: DEMO_TRADER_DEF,
-        x: 29 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
-        y: 10 * resolvedMap.tileHeight + resolvedMap.tileHeight,
+        x: 38 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
+        y: 13 * resolvedMap.tileHeight + resolvedMap.tileHeight,
         layer: 1,
         updatedAt: now,
       });
@@ -951,8 +951,8 @@ export const ensureDemoNpc = mutation({
 
     let marketObject = existingObjects.find((o) => o.instanceName === MARKET_INSTANCE) ?? undefined;
     if (!marketObject) {
-      const tileX = 31;
-      const tileY = 10;
+      const tileX = 33;
+      const tileY = 13;
       const objectId = await ctx.db.insert("mapObjects", {
         mapName: targetMap,
         spriteDefName: MARKET_SPRITE_DEF,
@@ -964,15 +964,15 @@ export const ensureDemoNpc = mutation({
       });
       marketObject = (await ctx.db.get(objectId)) ?? undefined;
     } else if (
-      marketObject.x !== 31 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
-      marketObject.y !== 10 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
+      marketObject.x !== 33 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
+      marketObject.y !== 13 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
       marketObject.layer !== 1 ||
       marketObject.spriteDefName !== MARKET_SPRITE_DEF
     ) {
       await ctx.db.patch(marketObject._id, {
         spriteDefName: MARKET_SPRITE_DEF,
-        x: 31 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
-        y: 10 * resolvedMap.tileHeight + resolvedMap.tileHeight,
+        x: 33 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
+        y: 13 * resolvedMap.tileHeight + resolvedMap.tileHeight,
         layer: 1,
         updatedAt: now,
       });
@@ -982,7 +982,7 @@ export const ensureDemoNpc = mutation({
     let questsObject = existingObjects.find((o) => o.instanceName === QUESTS_INSTANCE) ?? undefined;
     if (!questsObject) {
       const tileX = 23;
-      const tileY = 10;
+      const tileY = 13;
       const objectId = await ctx.db.insert("mapObjects", {
         mapName: targetMap,
         spriteDefName: QUESTS_SPRITE_DEF,
@@ -995,14 +995,14 @@ export const ensureDemoNpc = mutation({
       questsObject = (await ctx.db.get(objectId)) ?? undefined;
     } else if (
       questsObject.x !== 23 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
-      questsObject.y !== 10 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
+      questsObject.y !== 13 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
       questsObject.layer !== 1 ||
       questsObject.spriteDefName !== QUESTS_SPRITE_DEF
     ) {
       await ctx.db.patch(questsObject._id, {
         spriteDefName: QUESTS_SPRITE_DEF,
         x: 23 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
-        y: 10 * resolvedMap.tileHeight + resolvedMap.tileHeight,
+        y: 13 * resolvedMap.tileHeight + resolvedMap.tileHeight,
         layer: 1,
         updatedAt: now,
       });
@@ -1011,8 +1011,8 @@ export const ensureDemoNpc = mutation({
 
     let melObject = existingObjects.find((o) => o.instanceName === MEL_INSTANCE) ?? undefined;
     if (!melObject) {
-      const tileX = 21;
-      const tileY = 10;
+      const tileX = 18;
+      const tileY = 13;
       const objectId = await ctx.db.insert("mapObjects", {
         mapName: targetMap,
         spriteDefName: MEL_SPRITE_DEF,
@@ -1024,15 +1024,15 @@ export const ensureDemoNpc = mutation({
       });
       melObject = (await ctx.db.get(objectId)) ?? undefined;
     } else if (
-      melObject.x !== 21 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
-      melObject.y !== 10 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
+      melObject.x !== 18 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2 ||
+      melObject.y !== 13 * resolvedMap.tileHeight + resolvedMap.tileHeight ||
       melObject.layer !== 1 ||
       melObject.spriteDefName !== MEL_SPRITE_DEF
     ) {
       await ctx.db.patch(melObject._id, {
         spriteDefName: MEL_SPRITE_DEF,
-        x: 21 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
-        y: 10 * resolvedMap.tileHeight + resolvedMap.tileHeight,
+        x: 18 * resolvedMap.tileWidth + resolvedMap.tileWidth / 2,
+        y: 13 * resolvedMap.tileHeight + resolvedMap.tileHeight,
         layer: 1,
         updatedAt: now,
       });
@@ -1599,6 +1599,7 @@ export const ensureDemoNpc = mutation({
           interact: "coffee-sipped",
         },
         roomLabel: "bar-hub",
+        navAnchor: { x: 1104, y: 1344, label: "Coffee" },
         notes: "Free tavern consumable for future buffs, rituals, and social state.",
       }),
     });
@@ -1638,6 +1639,7 @@ export const ensureDemoNpc = mutation({
         },
         premiumOfferKey: "cozy-cabin-bookshelf-brief",
         roomLabel: "study-wing",
+        navAnchor: { x: 840, y: 288, label: "Bookshelf" },
         notes: "Bookshelf surface for future lore packets, lessons, and premium guide content.",
       }),
     });
@@ -1691,11 +1693,14 @@ export const ensureDemoNpc = mutation({
       objectType: "terminal",
       sourceType: "virtual",
       zoneKey: "market-station",
-      x: 756, y: 336, // anchor SOUTH of market-post (756,264) — tileY=8 is a wall at this column, patrol south instead
+      x: 804, y: 408, // anchor SOUTH of market-post (804,336) to keep the market surface away from the HUD lane
       tags: ["prices", "analytics", "market", "display"],
       affordances: ["inspect", "query"],
       valueClass: "utility",
-      metadataJson: JSON.stringify({ note: "Tenero-backed market display surface." }),
+      metadataJson: JSON.stringify({
+        navAnchor: { x: 804, y: 408, label: "Price Board" },
+        note: "Tenero-backed market display surface.",
+      }),
     });
     await upsertSemanticObject(ctx, {
       mapName: targetMap,
@@ -1704,11 +1709,14 @@ export const ensureDemoNpc = mutation({
       objectType: "board",
       sourceType: "virtual",
       zoneKey: "quest-board",
-      x: 564, y: 192, // anchor above quest-post (564,264) — 72px apart for patrol velocity
+      x: 564, y: 264, // anchor above quest-post (564,336) — keep the quest surface in the hall without clipping the HUD
       tags: ["quests", "bounties", "grants", "opportunities"],
       affordances: ["inspect", "read"],
       valueClass: "utility",
-      metadataJson: JSON.stringify({ note: "Zero Authority-backed opportunity board." }),
+      metadataJson: JSON.stringify({
+        navAnchor: { x: 564, y: 336, label: "Opportunity Board" },
+        note: "Zero Authority-backed opportunity board.",
+      }),
     });
     await upsertSemanticObject(ctx, {
       mapName: targetMap,
@@ -1717,11 +1725,14 @@ export const ensureDemoNpc = mutation({
       objectType: "board",
       sourceType: "virtual",
       zoneKey: "guide-desk",
-      x: 612, y: 192, // anchor above guide-post (612,264) — 72px apart
+      x: 684, y: 264, // anchor above guide-post (684,336) — widened away from the top HUD lane
       tags: ["guide", "education", "stacks", "ecosystem"],
       affordances: ["inspect", "read"],
       valueClass: "utility",
-      metadataJson: JSON.stringify({ note: "Ecosystem briefing board above the guide desk." }),
+      metadataJson: JSON.stringify({
+        navAnchor: { x: 684, y: 336, label: "Guide Board" },
+        note: "Ecosystem briefing board above the guide desk.",
+      }),
     });
     await upsertSemanticObject(ctx, {
       mapName: targetMap,
@@ -1730,11 +1741,14 @@ export const ensureDemoNpc = mutation({
       objectType: "trade-surface",
       sourceType: "virtual",
       zoneKey: "merchant-corner",
-      x: 708, y: 336, // anchor SOUTH of merchant-post (708,264) — tileY=8 is a wall at this column, patrol south instead
+      x: 924, y: 408, // anchor SOUTH of merchant-post (924,336) to keep Toma's route clear of the HUD
       tags: ["trade", "offers", "merchant"],
       affordances: ["trade", "inspect"],
       valueClass: "trade",
-      metadataJson: JSON.stringify({ note: "Trade surface for Toma's patrol route." }),
+      metadataJson: JSON.stringify({
+        navAnchor: { x: 924, y: 408, label: "Trade Corner" },
+        note: "Trade surface for Toma's patrol route.",
+      }),
     });
     // Mel curation zone and objects
     await upsertZone(ctx, {
@@ -1770,11 +1784,57 @@ export const ensureDemoNpc = mutation({
       objectType: "board",
       sourceType: "virtual",
       zoneKey: "curation-desk",
-      x: 516, y: 192, // anchor above mel-post (516,264) — 72px apart
+      x: 444, y: 264, // anchor above mel-post (444,336) — widened leftward from the top HUD lane
       tags: ["curation", "signal", "content", "projects"],
       affordances: ["inspect", "read"],
       valueClass: "utility",
-      metadataJson: JSON.stringify({ note: "Mel's paid curation surface — premium signal via x402." }),
+      metadataJson: JSON.stringify({
+        navAnchor: { x: 444, y: 336, label: "Curation Board" },
+        note: "Mel's paid curation surface — premium signal via x402.",
+      }),
+    });
+    await upsertSemanticObject(ctx, {
+      mapName: targetMap,
+      objectKey: "mel-captcha-table",
+      label: "Verification Table",
+      objectType: "verification-surface",
+      sourceType: "scene",
+      zoneKey: "entry-hall",
+      x: 641,
+      y: 451,
+      tags: ["captcha", "table", "qtc", "shareware", "mel"],
+      affordances: ["inspect", "verify", "dismiss"],
+      valueClass: "premium",
+      linkedAgentId: MEL_INSTANCE,
+      triggerType: "proximity",
+      freeActions: ["inspect", "verify-table"],
+      paidActions: ["claim-qtc-bonus"],
+      interactionPrompt: "Prove this is a table",
+      interactionSummary:
+        "A fake anti-bot window bursts from the table square with a scammy Quantum Time Crystal banner.",
+      inspectEventType: "captcha-table-triggered",
+      interactEventType: "captcha-table-answered",
+      roomLabel: "entry-hall",
+      metadataJson: JSON.stringify({
+        tile: { x: 26, y: 18 },
+        trigger: "proximity",
+        proximityCooldownMs: 45000,
+        oncePerSession: false,
+        freeActions: ["inspect", "verify-table"],
+        paidActions: ["claim-qtc-bonus"],
+        interactionPrompt: "Prove this is a table",
+        interactionSummary:
+          "A fake anti-bot window bursts from the table square with a scammy Quantum Time Crystal banner.",
+        eventBindings: {
+          inspect: "captcha-table-triggered",
+          interact: "captcha-table-answered",
+        },
+        premiumOfferKey: null,
+        roomLabel: "entry-hall",
+        navAnchor: { x: 641, y: 451, label: "Verification Table" },
+        notes:
+          "Retro shareware prank surface near Mel's table. Triggered by stepping onto the square; fake CTA only, no live paid rail attached.",
+      }),
     });
     await upsertSemanticObject(ctx, {
       mapName: targetMap,
@@ -1816,6 +1876,7 @@ export const ensureDemoNpc = mutation({
         },
         premiumOfferKey: WAX_CYLINDER_OFFER_KEY,
         roomLabel: "music-corner",
+        navAnchor: { x: 1848, y: 1464, label: "Phonograph" },
         notes:
           "Premium playback surface for the wax-cylinder memory fragment loop. Uses the phonograph as the world trigger.",
       }),
@@ -1852,7 +1913,11 @@ export const ensureDemoNpc = mutation({
       homeZoneKey: "guide-desk",
       postObjectKey: "guide-post",
       permissions: ["teach", "guide", "offer-premium"],
-      metadataJson: JSON.stringify({ anchorObjectKey: "guide-board", primaryTopics: ["Stacks", "sBTC", "ecosystem", "agents"] }),
+      metadataJson: JSON.stringify({
+        anchorObjectKey: "guide-board",
+        routeObjectKeys: ["guide-post", "guide-board", "bookshelf-lore", "coffee-service"],
+        primaryTopics: ["Stacks", "sBTC", "ecosystem", "agents"],
+      }),
     });
     await upsertNpcRole(ctx, {
       agentId: DEMO_TRADER_INSTANCE,
@@ -1863,7 +1928,11 @@ export const ensureDemoNpc = mutation({
       homeZoneKey: "merchant-corner",
       postObjectKey: "merchant-post",
       permissions: ["trade", "offer", "gossip"],
-      metadataJson: JSON.stringify({ anchorObjectKey: "trade-corner", primaryTopics: ["trade", "supplies", "rumors"] }),
+      metadataJson: JSON.stringify({
+        anchorObjectKey: "trade-corner",
+        routeObjectKeys: ["merchant-post", "trade-corner", "coffee-service", "bookshelf-lore"],
+        primaryTopics: ["trade", "supplies", "rumors"],
+      }),
     });
     await upsertNpcRole(ctx, {
       agentId: MARKET_INSTANCE,
@@ -1876,6 +1945,7 @@ export const ensureDemoNpc = mutation({
       permissions: ["quote", "analyze", "surface-signals"],
       metadataJson: JSON.stringify({
         anchorObjectKey: "price-board",
+        routeObjectKeys: ["market-post", "price-board", "trade-corner", "bookshelf-lore"],
         primaryTopics: ["prices", "analytics", "sBTC", "STX", "USDCx"],
       }),
     });
@@ -1890,6 +1960,7 @@ export const ensureDemoNpc = mutation({
       permissions: ["list-opportunities", "start-quest", "surface-bounties"],
       metadataJson: JSON.stringify({
         anchorObjectKey: "opportunity-board",
+        routeObjectKeys: ["quest-post", "opportunity-board", "bookshelf-lore", "coffee-service"],
         primaryTopics: ["grants", "bounties", "quests", "work"],
       }),
     });
@@ -1904,6 +1975,7 @@ export const ensureDemoNpc = mutation({
       permissions: ["curate", "surface-signal", "offer-premium"],
       metadataJson: JSON.stringify({
         anchorObjectKey: "curation-board",
+        routeObjectKeys: ["mel-post", "curation-board", "bookshelf-lore", PHONO_OBJECT_KEY, "coffee-service"],
         primaryTopics: ["projects", "creators", "content", "signal", "x402"],
       }),
     });
@@ -2355,5 +2427,44 @@ export const patchNpcStateSpriteDefs = mutation({
       }
     }
     return { patched };
+  },
+});
+
+export const resetNpcRuntimeToMapObjects = mutation({
+  args: {
+    mapName: v.optional(v.string()),
+  },
+  handler: async (ctx, { mapName }) => {
+    const targetMap = mapName ?? DEMO_MAP;
+    const states = await ctx.db
+      .query("npcState")
+      .withIndex("by_map", (q) => q.eq("mapName", targetMap))
+      .collect();
+
+    const reset: string[] = [];
+    for (const state of states) {
+      const mapObj = state.mapObjectId ? await ctx.db.get(state.mapObjectId as any) : null;
+      if (!mapObj) continue;
+
+      await ctx.db.patch(state._id, {
+        x: (mapObj as any).x,
+        y: (mapObj as any).y,
+        spawnX: (mapObj as any).x,
+        spawnY: (mapObj as any).y,
+        vx: 0,
+        vy: 0,
+        targetX: undefined,
+        targetY: undefined,
+        idleUntil: undefined,
+        currentIntent: "idle",
+        intentDetail: "reset to semantic post",
+        mood: "calm",
+        direction: "down",
+        lastTick: 0,
+      });
+      reset.push(state.instanceName ?? String(state._id));
+    }
+
+    return { mapName: targetMap, reset };
   },
 });

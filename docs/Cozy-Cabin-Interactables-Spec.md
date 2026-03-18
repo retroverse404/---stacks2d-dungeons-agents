@@ -192,6 +192,39 @@ Flavor direction:
 
 Avoid direct Harry Potter references in shipped content.
 
+### 5. Verification Table
+
+- object key: `mel-captcha-table`
+- label: `Verification Table`
+- tile coords: `26,18`
+- observed world coords: `641,451`
+- zone: `entry-hall`
+- intent:
+  - silly proximity trigger
+  - fake retro anti-bot popup
+  - readable world event for DM-style environmental humor
+
+Recommended behavior:
+
+- trigger:
+  - stepping onto the table square
+- free:
+  - `inspect`
+  - `verify-table`
+- spoofed premium-style CTA:
+  - `claim-qtc-bonus`
+- result:
+  - append a readable `worldEvents` row on trigger
+  - append a second `worldEvents` row on answer/dismiss
+  - optionally store a lightweight knowledge takeaway in `worldFacts`
+
+Metadata rule:
+
+- use `trigger: "proximity"`
+- include `proximityCooldownMs` so the popup reads like a joke, not a spam trap
+- store `tile`, `eventBindings`, and the spoofed CTA label in `metadataJson`
+- do not attach a real `premiumOfferKey` for this first pass; the banner is intentionally fake
+
 ## Minimal Data Shapes
 
 Do not introduce new tables for this first pass.

@@ -1,4 +1,4 @@
-import { Application } from "pixi.js";
+import { Application, Container } from "pixi.js";
 import { Camera } from "./Camera.ts";
 import { MapRenderer } from "./MapRenderer.ts";
 import { EntityLayer } from "./EntityLayer.ts";
@@ -11,6 +11,13 @@ import { X402RequestError, resolveX402Url, x402Fetch } from "../lib/x402.ts";
 import { api } from "../../convex/_generated/api";
 import type { AppMode, MapData, Portal, ProfileData, PresenceData } from "./types.ts";
 import type { Id } from "../../convex/_generated/dataModel";
+import { splashManager } from "../splash/SplashManager.ts";
+import {
+  createRetroCaptchaSplash,
+  pickRetroCaptchaVariant,
+  type RetroCaptchaAnswer,
+  type RetroCaptchaVariant,
+} from "../splash/screens/RetroCaptchaSplash.ts";
 
 const PRESENCE_INTERVAL_MS = 250;   // how often to push position to Convex
 const SAVE_INTERVAL_MS = 30_000;   // how often to persist position to profile (was 10s)
@@ -19,6 +26,7 @@ const DEFAULT_ITEM_PICKUP_SFX = "/assets/audio/take-item.mp3";
 const DEFAULT_MAP_MUSIC_VOLUME = 0.15;
 const COZY_CABIN_MUSIC_URL = "/assets/audio/Nardis%20%28Miles%20Davis%29%20HipHop%20Remix.mp3";
 const COZY_CABIN_MUSIC_VOLUME = 0.34;
+const RETRO_CAPTCHA_TABLE_OBJECT_KEY = "mel-captcha-table";
 const BUILTIN_MAP_ALIASES: Record<string, string> = {
   "Cozy Cabin": "cozy-cabin",
   "cozy-cabin": "Cozy Cabin",
@@ -27,6 +35,8 @@ const BUILTIN_MAP_ALIASES: Record<string, string> = {
 type SemanticInteractableMeta = {
   tile?: { x: number; y: number };
   trigger?: "proximity" | "interact" | "timed" | "payment-complete";
+  proximityCooldownMs?: number;
+  oncePerSession?: boolean;
   freeActions?: string[];
   paidActions?: string[];
   interactionPrompt?: string;
@@ -62,6 +72,20 @@ type PremiumOfferRecord = {
   endpointPath?: string;
   status: string;
   metadataJson?: string;
+};
+
+type AgentChatterDetails = {
+  displayName?: string;
+  replyToDisplayName?: string;
+};
+
+type AgentChatterEvent = {
+  _id: string;
+  eventType: string;
+  actorId?: string;
+  summary: string;
+  detailsJson?: string;
+  timestamp: number;
 };
 
 type SemanticInteractable = {
@@ -106,6 +130,7 @@ export class Game {
   camera: Camera;
   mapRenderer!: MapRenderer;
   entityLayer!: EntityLayer;
+  worldUiLayer!: Container;
   objectLayer!: ObjectLayer;
   worldItemLayer!: WorldItemLayer;
   input: InputManager;
@@ -140,12 +165,18 @@ export class Game {
   // Live world items subscription
   private worldItemsUnsub: (() => void) | null = null;
   private semanticInteractables: SemanticInteractable[] = [];
+  private activeProximityObjectKeys = new Set<string>();
+  private proximityTriggerState = new Map<
+    string,
+    { lastTriggeredAt: number; lastResolvedAt?: number; triggeredCount: number }
+  >();
   private semanticPromptEl: HTMLDivElement | null = null;
   private premiumPanelEl: HTMLDivElement | null = null;
   private premiumInteractionPending = false;
 
   // Live NPC state subscription
   private npcStateUnsub: (() => void) | null = null;
+  private agentChatterUnsub: (() => void) | null = null;
   /** Cached sprite definitions for NPC rendering */
   private spriteDefCache: Map<string, any> = new Map();
 
@@ -176,14 +207,16 @@ export class Game {
     this.objectLayer.setAudio(this.audio);
     this.worldItemLayer = new WorldItemLayer();
     this.entityLayer = new EntityLayer(this);
+    this.worldUiLayer = this.entityLayer.worldUiContainer;
 
     // Add layers to stage
-    // Order: map base -> worldItems -> objects -> entities -> map overlays (above entities)
+    // Order: map base -> worldItems -> objects -> entities -> map overlays -> world UI
     this.app.stage.addChild(this.mapRenderer.container);        // base map tiles
     this.app.stage.addChild(this.worldItemLayer.container);      // pickups
     this.app.stage.addChild(this.objectLayer.container);         // placed objects
     this.app.stage.addChild(this.entityLayer.container);         // player + NPCs
     this.app.stage.addChild(this.mapRenderer.overlayLayerContainer); // overlay tiles (above entities)
+    this.app.stage.addChild(this.worldUiLayer);                  // speech/name/prompt UI above overlays
     this.app.stage.sortableChildren = true;
 
     // Resize handling
@@ -362,8 +395,9 @@ export class Game {
       let mapData: MapData | null = null;
       let loadedStaticMap = false;
 
-      // Determine which map to load — use the profile's saved map, or default
-      const targetMap = this.profile.mapName || "Cozy Cabin";
+      // Cozy Cabin is the canonical sandbox entry point. Saved profile map state
+      // should not override the first world a user boots into.
+      const targetMap = "Cozy Cabin";
       const mapCandidates = this.getBuiltInMapCandidates(targetMap);
       console.log(`Loading map: "${targetMap}" (profile.mapName=${this.profile.mapName})`);
 
@@ -431,7 +465,7 @@ export class Game {
       }
 
       // 3) Ultimate fallback: cozy-cabin static JSON
-      if (!mapData && targetMap !== "cozy-cabin") {
+      if (!mapData) {
         const resp = await fetch("/assets/maps/cozy-cabin.json");
         if (resp.ok) {
           const contentType = resp.headers.get("content-type") ?? "";
@@ -531,6 +565,7 @@ export class Game {
       // Subscribe to server-authoritative NPC state
       await this.loadSpriteDefs();
       this.subscribeToNpcState(this.currentMapName);
+      this.subscribeToAgentChatter(this.currentMapName);
 
       // Ensure the NPC tick loop is running on the server (skip for guests)
       if (!this.isGuest) {
@@ -644,6 +679,8 @@ export class Game {
       this.worldItemsUnsub = null;
       this.npcStateUnsub?.();
       this.npcStateUnsub = null;
+      this.agentChatterUnsub?.();
+      this.agentChatterUnsub = null;
 
       // 4) Clear rendering layers
       console.log("[MapChange] step 4: clearing layers");
@@ -736,6 +773,7 @@ export class Game {
 
       await this.loadSpriteDefs();
       this.subscribeToNpcState(this.currentMapName);
+      this.subscribeToAgentChatter(this.currentMapName);
 
       // 8) Restart presence on new map
       console.log("[MapChange] step 9: restarting presence");
@@ -875,6 +913,8 @@ export class Game {
         this.entityLayer.playerX,
         this.entityLayer.playerY,
       );
+
+      this.handleSemanticProximityTriggers();
 
       // Handle item pickup with E key (only if no toggleable object is near)
       // Guests can't interact — skip all mutations
@@ -1361,14 +1401,33 @@ export class Game {
       this.semanticInteractables = (objects ?? [])
         .filter((object: any) => typeof object.x === "number" && typeof object.y === "number")
         .map((object: any) => {
-          let metadata: SemanticInteractableMeta = {};
-          if (typeof object.metadataJson === "string" && object.metadataJson.length > 0) {
-            try {
-              metadata = JSON.parse(object.metadataJson);
-            } catch (error) {
-              console.warn(`[Semantics] Failed to parse metadata for ${object.objectKey}`, error);
-            }
-          }
+          const parsedMeta =
+            typeof object.metadataJson === "string" && object.metadataJson.length > 0
+              ? parseJsonObject<SemanticInteractableMeta>(object.metadataJson) ?? {}
+              : {};
+          const eventBindings = {
+            inspect: object.inspectEventType ?? parsedMeta.eventBindings?.inspect,
+            interact: object.interactEventType ?? parsedMeta.eventBindings?.interact,
+            paid: object.paidEventType ?? parsedMeta.eventBindings?.paid,
+          };
+          const metadata: SemanticInteractableMeta = {
+            ...parsedMeta,
+            trigger: object.triggerType ?? parsedMeta.trigger,
+            freeActions:
+              Array.isArray(object.freeActions) && object.freeActions.length > 0
+                ? object.freeActions
+                : parsedMeta.freeActions,
+            paidActions:
+              Array.isArray(object.paidActions) && object.paidActions.length > 0
+                ? object.paidActions
+                : parsedMeta.paidActions,
+            interactionPrompt: object.interactionPrompt ?? parsedMeta.interactionPrompt,
+            interactionSummary: object.interactionSummary ?? parsedMeta.interactionSummary,
+            premiumOfferKey: object.premiumOfferKey ?? parsedMeta.premiumOfferKey,
+            itemDefName: object.itemDefName ?? parsedMeta.itemDefName,
+            roomLabel: object.roomLabel ?? parsedMeta.roomLabel,
+            eventBindings,
+          };
           return {
             objectKey: object.objectKey,
             label: object.label,
@@ -1383,6 +1442,158 @@ export class Game {
       console.warn("Failed to load semantic interactables:", err);
       this.semanticInteractables = [];
     }
+  }
+
+  private handleSemanticProximityTriggers() {
+    if (
+      this.mode !== "play" ||
+      this.entityLayer.inDialogue ||
+      this.premiumPanelEl ||
+      splashManager.isActive()
+    ) {
+      return;
+    }
+
+    const playerTile = this.mapRenderer.worldToTile(
+      this.entityLayer.playerX,
+      this.entityLayer.playerY,
+    );
+    const currentKeys = new Set<string>();
+
+    for (const object of this.semanticInteractables) {
+      if (object.metadata.trigger !== "proximity") continue;
+      const tile = object.metadata.tile;
+      if (!tile) continue;
+      if (tile.x !== playerTile.tileX || tile.y !== playerTile.tileY) continue;
+      currentKeys.add(object.objectKey);
+      if (
+        !this.activeProximityObjectKeys.has(object.objectKey) &&
+        this.canOpenSemanticProximityTrigger(object)
+      ) {
+        void this.openSemanticProximityTrigger(object);
+      }
+    }
+
+    this.activeProximityObjectKeys = currentKeys;
+  }
+
+  private proximityTriggerStateKey(object: SemanticInteractable) {
+    return `${String(this.profile._id ?? this.profile.name)}:${this.currentMapName}:${object.objectKey}`;
+  }
+
+  private canOpenSemanticProximityTrigger(object: SemanticInteractable) {
+    const state = this.proximityTriggerState.get(this.proximityTriggerStateKey(object));
+    if (!state) return true;
+    if (object.metadata.oncePerSession) return false;
+    const cooldownMs =
+      typeof object.metadata.proximityCooldownMs === "number"
+        ? object.metadata.proximityCooldownMs
+        : object.objectKey === RETRO_CAPTCHA_TABLE_OBJECT_KEY
+          ? 45_000
+          : 0;
+    return cooldownMs <= 0 || Date.now() - state.lastTriggeredAt >= cooldownMs;
+  }
+
+  private noteSemanticProximityTriggerOpened(object: SemanticInteractable) {
+    const key = this.proximityTriggerStateKey(object);
+    const current = this.proximityTriggerState.get(key);
+    this.proximityTriggerState.set(key, {
+      lastTriggeredAt: Date.now(),
+      lastResolvedAt: current?.lastResolvedAt,
+      triggeredCount: (current?.triggeredCount ?? 0) + 1,
+    });
+  }
+
+  private noteSemanticProximityTriggerResolved(object: SemanticInteractable) {
+    const key = this.proximityTriggerStateKey(object);
+    const current = this.proximityTriggerState.get(key);
+    if (!current) return;
+    this.proximityTriggerState.set(key, {
+      ...current,
+      lastResolvedAt: Date.now(),
+    });
+  }
+
+  private async openSemanticProximityTrigger(object: SemanticInteractable) {
+    this.noteSemanticProximityTriggerOpened(object);
+
+    if (object.objectKey !== RETRO_CAPTCHA_TABLE_OBJECT_KEY) {
+      const summary =
+        object.metadata.interactionSummary ||
+        `${this.profile.name} stepped into ${object.label}.`;
+      await this.appendSemanticWorldEvent(
+        object,
+        object.metadata.eventBindings?.inspect || "proximity-triggered",
+        summary,
+        { trigger: "proximity" },
+      );
+      return;
+    }
+
+    const variant = pickRetroCaptchaVariant();
+    const summary =
+      `${this.profile.name} stepped onto Mel's table square and triggered a fake Quantum Time Crystal anti-bot popup.`;
+
+    await this.appendSemanticWorldEvent(
+      object,
+      object.metadata.eventBindings?.inspect || "captcha-table-triggered",
+      summary,
+      {
+        trigger: "proximity",
+        popupType: "retro-shareware-captcha",
+        titleBar: variant.titleBar,
+        ctaLabel: variant.ctaLabel,
+        visualStyle: variant.visualStyle.label,
+      },
+    );
+    await this.rememberSemanticDiscovery(object, summary);
+
+    splashManager.push({
+      id: `retro-captcha-${Date.now()}`,
+      transparent: true,
+      pausesGame: true,
+      create: (callbacks) =>
+        createRetroCaptchaSplash({
+          ...callbacks,
+          variant,
+          zoneLabel: object.zoneKey ?? object.metadata.roomLabel ?? "Cozy Cabin",
+          onResolve: (answer) => {
+            void this.onRetroCaptchaResolved(object, variant, answer);
+          },
+        }),
+    });
+  }
+
+  private async onRetroCaptchaResolved(
+    object: SemanticInteractable,
+    variant: RetroCaptchaVariant,
+    answer: RetroCaptchaAnswer,
+  ) {
+    this.noteSemanticProximityTriggerResolved(object);
+    const eventType =
+      answer === "dismissed" ? "captcha-table-dismissed" : "captcha-table-answered";
+    let summary = `${this.profile.name} dismissed the fake anti-bot popup at ${object.label}.`;
+    if (answer === "table") {
+      summary =
+        `${this.profile.name} correctly identified Mel's table during a fake Quantum Time Crystal verification.`;
+    } else if (answer === "not-table") {
+      summary =
+        `${this.profile.name} insisted Mel's table was not a table during the retro shareware popup.`;
+    }
+
+    await this.appendSemanticWorldEvent(object, eventType, summary, {
+      answer,
+      popupType: "retro-shareware-captcha",
+      titleBar: variant.titleBar,
+      ctaLabel: variant.ctaLabel,
+      visualStyle: variant.visualStyle.label,
+    });
+
+    if (answer !== "dismissed") {
+      await this.rememberSemanticDiscovery(object, summary);
+    }
+
+    this.showSemanticNotification(summary);
   }
 
   private subscribeToWorldItems(mapName: string) {
@@ -1551,6 +1762,7 @@ export class Game {
       `${this.profile.name} interacted with ${nearest.label}.`;
 
     void this.appendSemanticWorldEvent(nearest, eventType, summary);
+    void this.rememberSemanticDiscovery(nearest, summary);
     this.showSemanticNotification(summary);
   }
 
@@ -1611,6 +1823,110 @@ export class Game {
       });
     } catch (err) {
       console.warn("Semantic interaction event failed:", err);
+    }
+  }
+
+  private knowledgeSubjectId() {
+    return String(this.profile._id ?? this.profile.name);
+  }
+
+  private semanticDiscoveryValue(
+    object: SemanticInteractable,
+    summary: string,
+    extra?: Record<string, unknown>,
+  ) {
+    return JSON.stringify({
+      label: object.label,
+      objectType: object.objectType,
+      zoneKey: object.zoneKey ?? null,
+      roomLabel: object.metadata.roomLabel ?? null,
+      freeActions: object.metadata.freeActions ?? [],
+      paidActions: object.metadata.paidActions ?? [],
+      interactionPrompt: object.metadata.interactionPrompt ?? null,
+      premiumOfferKey: object.metadata.premiumOfferKey ?? null,
+      latestSummary: summary,
+      ...(extra ?? {}),
+    });
+  }
+
+  private async rememberSemanticDiscovery(object: SemanticInteractable, summary: string) {
+    try {
+      const convex = getConvexClient();
+      const factKey = `knowledge:${object.objectKey}`;
+      const valueJson = this.semanticDiscoveryValue(object, summary);
+
+      await Promise.all([
+        convex.mutation(api.worldState.recordDiscovery, {
+          mapName: this.currentMapName,
+          factKey,
+          factType: "knowledge",
+          scope: "world",
+          source: "semantic-interaction",
+          objectKey: object.objectKey,
+          zoneKey: object.zoneKey,
+          summary,
+          valueJson,
+        }),
+        convex.mutation(api.worldState.recordDiscovery, {
+          mapName: this.currentMapName,
+          factKey,
+          factType: "knowledge",
+          scope: "player",
+          subjectId: this.knowledgeSubjectId(),
+          source: "semantic-interaction",
+          objectKey: object.objectKey,
+          zoneKey: object.zoneKey,
+          summary,
+          valueJson,
+        }),
+      ]);
+    } catch (error) {
+      console.warn("Failed to record semantic discovery:", error);
+    }
+  }
+
+  private async rememberPremiumDiscovery(
+    object: SemanticInteractable,
+    offerKey: string,
+    summary: string,
+    result: Record<string, unknown>,
+  ) {
+    try {
+      const convex = getConvexClient();
+      const factKey = `access:${object.objectKey}:premium`;
+      const valueJson = this.semanticDiscoveryValue(object, summary, {
+        offerKey,
+        delivery: "premium",
+        result,
+      });
+
+      await Promise.all([
+        convex.mutation(api.worldState.recordDiscovery, {
+          mapName: this.currentMapName,
+          factKey,
+          factType: "access",
+          scope: "world",
+          source: "premium-interactable",
+          objectKey: object.objectKey,
+          zoneKey: object.zoneKey,
+          summary,
+          valueJson,
+        }),
+        convex.mutation(api.worldState.recordDiscovery, {
+          mapName: this.currentMapName,
+          factKey,
+          factType: "access",
+          scope: "player",
+          subjectId: this.knowledgeSubjectId(),
+          source: "premium-interactable",
+          objectKey: object.objectKey,
+          zoneKey: object.zoneKey,
+          summary,
+          valueJson,
+        }),
+      ]);
+    } catch (error) {
+      console.warn("Failed to record premium discovery:", error);
     }
   }
 
@@ -1798,6 +2114,7 @@ export class Game {
         agentId: offer.agentId,
         result,
       });
+      await this.rememberPremiumDiscovery(object, offer.offerKey, successSummary, result);
 
       if (offerMeta.unlockFactKey) {
         const convex = getConvexClient();
@@ -1995,6 +2312,38 @@ export class Game {
     );
   }
 
+  private subscribeToAgentChatter(mapName: string) {
+    this.agentChatterUnsub?.();
+
+    const convex = getConvexClient();
+
+    this.agentChatterUnsub = convex.onUpdate(
+      api.worldState.listEvents,
+      { mapName, limit: 24 },
+      (rows) => {
+        const cutoff = Date.now() - 5 * 60_000;
+        const chatter = (rows as AgentChatterEvent[])
+          .filter((row) => row.eventType.startsWith("agent-thought:") && row.timestamp >= cutoff)
+          .reverse()
+          .slice(-4)
+          .map((row) => {
+            const details = parseJsonObject<AgentChatterDetails>(row.detailsJson) ?? {};
+            return {
+              id: String(row._id),
+              speaker: details.displayName ?? row.actorId ?? "Agent",
+              summary: row.summary,
+              replyToDisplayName: details.replyToDisplayName ?? null,
+            };
+          });
+
+        this.entityLayer.applyAgentChatter(chatter);
+      },
+      (err) => {
+        console.warn("Agent chatter subscription error:", err);
+      },
+    );
+  }
+
   async loadMap(mapData: MapData) {
     if (this.mapRenderer) {
       await this.mapRenderer.loadMap(mapData);
@@ -2009,6 +2358,8 @@ export class Game {
     this.worldItemsUnsub = null;
     this.npcStateUnsub?.();
     this.npcStateUnsub = null;
+    this.agentChatterUnsub?.();
+    this.agentChatterUnsub = null;
     if (this.unlockHandler) {
       document.removeEventListener("click", this.unlockHandler);
       document.removeEventListener("keydown", this.unlockHandler);
