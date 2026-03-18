@@ -59,7 +59,7 @@
   width: 100%;
   max-width: 960px;
   margin: 0 auto;
-  padding: 72px 16px 32px;
+  padding: 72px 16px 148px;
 }
 
 .profile-eyebrow {
@@ -131,12 +131,25 @@
   color: var(--danger);
 }
 
+.profile-bottom-rail {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(780px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
 .profile-footer-note {
-  margin-top: 10px;
   max-width: 780px;
-  color: rgba(255, 255, 255, 0.48);
+  color: rgba(255, 255, 255, 0.44);
   font-size: 11px;
-  line-height: 1.55;
+  line-height: 1.5;
   text-align: center;
   text-wrap: balance;
 }
@@ -148,13 +161,13 @@
   gap: 14px;
   width: 100%;
   max-width: 780px;
-  margin-top: 4px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: rgba(7, 10, 14, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(7, 10, 14, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(14px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
+  pointer-events: auto;
 }
 
 .profile-soundtrack-meta {
@@ -171,7 +184,7 @@
 }
 
 .profile-soundtrack-status {
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 12px;
   line-height: 1.45;
   white-space: nowrap;
@@ -695,7 +708,7 @@
 
   .profile-content {
     justify-content: flex-start;
-    padding: 72px 4px 24px;
+    padding: 72px 4px 168px;
   }
 
   .profile-top-bar {
@@ -748,5 +761,14 @@
 
   .profile-soundtrack-status {
     white-space: normal;
+  }
+
+  .profile-bottom-rail {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    transform: none;
+    width: auto;
   }
 }

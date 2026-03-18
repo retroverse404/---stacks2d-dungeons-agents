@@ -21,6 +21,7 @@ const DEFAULT_PROFILE_BACKGROUND_VIDEO_URL = "/assets/Video%20Loops/DnA2A.webm";
 const DEFAULT_PROFILE_SOUNDTRACK_URL = "/assets/audio/Opening%20To%20Profion%27s%20Dungeon.mp3";
 const DEFAULT_PROFILE_SOUNDTRACK_TITLE = "Opening To Profion's Dungeon";
 const DEFAULT_PROFILE_SOUNDTRACK_ARTIST = "Justin Caine Burnett";
+const CANONICAL_START_WORLD = "Cozy Cabin";
 
 // Available character sprites the player can pick from
 const SPRITE_OPTIONS = [
@@ -58,6 +59,11 @@ function createProfileBackgroundMedia() {
 
   shell.appendChild(video);
   return shell;
+}
+
+function isCozyCabinName(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized === "cozy cabin" || normalized === "cozy-cabin";
 }
 
 export class ProfileScreen {
@@ -245,6 +251,15 @@ export class ProfileScreen {
     this.superuserEl.style.display = "none";
     content.appendChild(this.superuserEl);
 
+    const bottomRail = document.createElement("div");
+    bottomRail.className = "profile-bottom-rail";
+
+    const footerNote = document.createElement("div");
+    footerNote.className = "profile-footer-note";
+    footerNote.textContent =
+      "* Demo build. Some wallet, payment, and market features currently run on testnet or prototype infrastructure.";
+    bottomRail.appendChild(footerNote);
+
     const soundtrackBar = document.createElement("div");
     soundtrackBar.className = "profile-soundtrack";
 
@@ -266,15 +281,10 @@ export class ProfileScreen {
     this.soundtrackToggleBtn.addEventListener("click", () => this.toggleSoundtrack());
 
     soundtrackBar.append(soundtrackMeta, this.soundtrackToggleBtn);
-    content.appendChild(soundtrackBar);
+    bottomRail.appendChild(soundtrackBar);
+    this.el.appendChild(bottomRail);
     this.renderSoundtrackStatus();
     this.startSoundtrack();
-
-    const footerNote = document.createElement("div");
-    footerNote.className = "profile-footer-note";
-    footerNote.textContent =
-      "* Demo build. Some wallet, payment, and market features currently run on testnet or prototype infrastructure.";
-    content.appendChild(footerNote);
 
     // Confirm dialog overlay (hidden)
     this.confirmOverlay = document.createElement("div");
@@ -479,9 +489,18 @@ export class ProfileScreen {
   /** Select the profile and start the game */
   private async selectProfile(profile: ProfileData) {
     try {
+      const convex = getConvexClient();
+      await convex.mutation(api.profiles.resetMap, {
+        id: profile._id as any,
+        mapName: CANONICAL_START_WORLD,
+      });
+      const refreshed = await convex.query(api.profiles.get, { id: profile._id as any });
+      const selected = refreshed
+        ? ({ ...refreshed, role: (refreshed as any).role ?? "player" } as unknown as ProfileData)
+        : ({ ...profile, mapName: CANONICAL_START_WORLD } as ProfileData);
       this.profilesUnsub?.();
       this.profilesUnsub = null;
-      this.onSelect(profile);
+      this.onSelect(selected);
     } catch (err: any) {
       console.warn("Failed to select profile:", err);
     }
@@ -586,7 +605,7 @@ export class ProfileScreen {
     startMapLabel.textContent = "Starting world";
     this.startMapSelect = document.createElement("select");
     this.startMapSelect.className = "profile-select";
-    this.startMapSelect.innerHTML = `<option value="cozy-cabin">cozy-cabin</option>`;
+    this.startMapSelect.innerHTML = `<option value="${CANONICAL_START_WORLD}">${CANONICAL_START_WORLD}</option>`;
     startMapField.append(startMapLabel, this.startMapSelect);
     form.appendChild(startMapField);
 
@@ -658,12 +677,12 @@ export class ProfileScreen {
         this.mapLabels.set(name, (m.labelNames as string[]) ?? []);
       }
 
-      const preferred = names.includes("cozy-cabin")
-        ? "cozy-cabin"
-        : names[0] ?? "cozy-cabin";
+      const preferred = names.find((name) => isCozyCabinName(name))
+        ?? names[0]
+        ?? CANONICAL_START_WORLD;
 
       this.startMapSelect.innerHTML = "";
-      for (const name of names.length ? names : ["cozy-cabin"]) {
+      for (const name of names.length ? names : [CANONICAL_START_WORLD]) {
         const opt = document.createElement("option");
         opt.value = name;
         opt.textContent = name;
@@ -679,10 +698,10 @@ export class ProfileScreen {
       // Populate labels for the initially selected map
       this.updateLabelDropdown(preferred);
     } catch {
-      this.startMapSelect.innerHTML = `<option value="cozy-cabin">cozy-cabin</option>`;
-      this.startMapSelect.value = "cozy-cabin";
+      this.startMapSelect.innerHTML = `<option value="${CANONICAL_START_WORLD}">${CANONICAL_START_WORLD}</option>`;
+      this.startMapSelect.value = CANONICAL_START_WORLD;
       this.mapLabels.clear();
-      this.updateLabelDropdown("cozy-cabin");
+      this.updateLabelDropdown(CANONICAL_START_WORLD);
     }
   }
 
@@ -727,7 +746,7 @@ export class ProfileScreen {
     try {
       const convex = getConvexClient();
       const color = PROFILE_COLORS[Math.floor(Math.random() * PROFILE_COLORS.length)];
-      const startMapName = this.startMapSelect?.value?.trim() || "cozy-cabin";
+      const startMapName = this.startMapSelect?.value?.trim() || CANONICAL_START_WORLD;
       const startLabel = this.startLabelSelect?.value?.trim() || "start1";
       const profileId = await convex.mutation(api.profiles.create, {
         name,
