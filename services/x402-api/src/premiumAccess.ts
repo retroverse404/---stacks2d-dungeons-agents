@@ -36,7 +36,7 @@ function resolveStacksNetwork(value: string | undefined): StacksNetworkName {
 }
 
 function getStacksPrivateKey() {
-  return process.env.DEPLOYER_PRIVATE_KEY || process.env.STACKS_PRIVATE_KEY || "";
+  return (process.env.DEPLOYER_PRIVATE_KEY || process.env.STACKS_PRIVATE_KEY || "").trim();
 }
 
 function getConvexUrl() {
