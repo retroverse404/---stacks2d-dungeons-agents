@@ -227,7 +227,7 @@ export class AuthScreen {
     divider1.textContent = "or";
     card.appendChild(divider1);
 
-    if (!isLocal) {
+    if (!isLocalConvexUrl(import.meta.env.VITE_CONVEX_URL as string | undefined)) {
       const ghBtn = document.createElement("button");
       ghBtn.className = "auth-btn github";
       ghBtn.innerHTML = `<span class="icon">${GITHUB_ICON}</span> Sign in with GitHub`;
