@@ -11,6 +11,8 @@ This is a playable Stacks-native GameFi sandbox where wallet-backed actors, paid
 
 The project builds on the 61cygni/tinyrealms 2D engine, providing a strong foundation for persistent world simulation.
 
+`Stackshub` is used here as a working name for a community-driven idea bank of modular dApps, not as final product branding.
+
 ## At A Glance
 
 - **What it is**: a playable Stacks-native agent sandbox.
@@ -28,14 +30,14 @@ Submission pack:
 - [submission/README.md](/home/rv404/RV404-Lab/PRODUCTIVITY/Obsidian/Test-1a/Apps/tinyrealms/submission/README.md)
 - [submission/submission.json](/home/rv404/RV404-Lab/PRODUCTIVITY/Obsidian/Test-1a/Apps/tinyrealms/submission/submission.json)
 
-## Flagship Loop
+## Current Demo
 
-The flagship loop centers on:
+The current demo focuses on:
 
-- one world-native premium interaction loop
-- clear STX and Stacks settlement
-- visible payment and proof flow
-- stable object-triggered and agent-triggered interactions
+- one in-world premium interaction
+- STX payment on Stacks testnet
+- visible payment and proof steps
+- object-triggered and agent-triggered interactions
 
 ## Live Contract Stack
 
