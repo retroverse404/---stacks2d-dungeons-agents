@@ -108,7 +108,7 @@ The current demo focuses on:
 
 ## Why This Matters
 
-`stacks2d (tinyrealms)` is being developed as a practical bridge between:
+`stacks2d` is being developed as a practical bridge between:
 - customizable 2D worldbuilding
 - AI-enhanced NPC interaction
 - modular agent infrastructure
@@ -144,7 +144,7 @@ E[External Integrations] --> D
 
 ```mermaid
 flowchart LR
-  G[stacks2d / TinyRealms] --> X[AIBTC Adapter]
+  G[stacks2d] --> X[AIBTC Adapter]
   G --> Z[Zero Authority Adapter]
   G --> P[x402 Adapter]
   G --> C[Clarity Proof Layer]
@@ -186,7 +186,7 @@ flowchart LR
   L[Live now] --> S[Scaffolded now]
   S --> P[Planned next]
 
-  L["Live now<br/>TinyRealms runtime<br/>Convex backend<br/>Braintrust proxy AI path<br/>Zero Authority ingestion<br/>Tenero live ticker<br/>guide / market / quests surfaces<br/>8 deployed testnet contracts"]
+  L["Live now<br/>stacks2d runtime<br/>Convex backend<br/>Braintrust proxy AI path<br/>Zero Authority ingestion<br/>Tenero live ticker<br/>guide / market / quests surfaces<br/>8 deployed testnet contracts"]
   S["Scaffolded now<br/>agent state tables<br/>AIBTC-compatible registry<br/>services/x402-api boundary<br/>worldFacts blackboard pattern<br/>deployed but not integrated QTC / SFT economy"]
   P["Planned next<br/>x402 proof capture in demo<br/>purposeful agents<br/>AIBTC account execution<br/>live gameplay economy wiring"]
 ```
@@ -709,7 +709,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  G[stacks2d / TinyRealms] --> X[AIBTC Adapter]
+  G[stacks2d] --> X[AIBTC Adapter]
   G --> Z[Zero Authority Adapter]
   G --> P[x402 Adapter]
   X --> AX[AIBTC services]
@@ -762,4 +762,4 @@ possible inside the same world model
 
 ## Attribution
 
-This repository builds on the TinyRealms foundation while taking the product in a different direction around semantic worlds, AI agent simulation, and Stacks/Bitcoin-native economic primitives.
+This repository builds on the original 2D world foundation while taking the product in a different direction around semantic worlds, AI agent simulation, and Stacks/Bitcoin-native economic primitives.
