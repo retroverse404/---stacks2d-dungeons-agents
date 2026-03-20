@@ -22,6 +22,7 @@ const GITHUB_ICON = `<svg width="20" height="20" viewBox="0 0 16 16" fill="curre
 const LEATHER_ICON_SRC = "/Leather-symbol-off-white.svg";
 const XVERSE_ICON_SRC = "/Xverse_idpfi8N7fU_0.png";
 const WALLETCONNECT_ICON_SRC = "/Walletconnect.png";
+const STACKSHUB_MARK_SRC = "/stackshub-white.svg";
 const AUTO_RESUME_SESSION_FLAG = "VITE_AUTO_RESUME_SESSION";
 const DEFAULT_AUTH_BACKGROUND_YOUTUBE_URL = "https://www.youtube.com/watch?v=QSNwU1lDhqI";
 
@@ -107,9 +108,29 @@ export class AuthScreen {
     content.className = "auth-content";
     this.el.appendChild(content);
 
-    const title = document.createElement("h1");
-    title.textContent = "Stackshub";
-    content.appendChild(title);
+    const brand = document.createElement("div");
+    brand.className = "auth-brand";
+    content.appendChild(brand);
+
+    const brandIcon = document.createElement("img");
+    brandIcon.className = "auth-brand-icon";
+    brandIcon.src = STACKSHUB_MARK_SRC;
+    brandIcon.alt = "Stackshub";
+    brand.appendChild(brandIcon);
+
+    const brandWordmark = document.createElement("div");
+    brandWordmark.className = "auth-brand-wordmark";
+    brand.appendChild(brandWordmark);
+
+    const brandStacks = document.createElement("div");
+    brandStacks.className = "auth-brand-stacks";
+    brandStacks.textContent = "Stacks";
+    brandWordmark.appendChild(brandStacks);
+
+    const brandHub = document.createElement("div");
+    brandHub.className = "auth-brand-hub";
+    brandHub.textContent = "hub";
+    brandWordmark.appendChild(brandHub);
 
     const sub = document.createElement("div");
     sub.className = "auth-subtitle";
@@ -442,14 +463,14 @@ export class AuthScreen {
       });
 
       const otherBtn = this.makeWalletIconButton(
-        "Other wallet",
+        "Other wallet (coming soon)",
         WALLETCONNECT_ICON_SRC,
         "WalletConnect logo",
         "Other wallet",
       );
-      otherBtn.addEventListener("click", () => {
-        void this.connectWallet(undefined, "Other wallet");
-      });
+      otherBtn.disabled = true;
+      otherBtn.title = "WalletConnect and other wallet flows are coming soon.";
+      otherBtn.classList.add("is-coming-soon");
 
       const cancelBtn = this.makeWalletButton("Cancel", "secondary");
       cancelBtn.classList.add("auth-wallet-inline-btn");
@@ -513,14 +534,14 @@ export class AuthScreen {
       });
 
       const otherBtn = this.makeWalletIconButton(
-        "Other wallet",
+        "Other wallet (coming soon)",
         WALLETCONNECT_ICON_SRC,
         "WalletConnect logo",
         "Other wallet",
       );
-      otherBtn.addEventListener("click", () => {
-        void this.connectWallet(undefined, "Other wallet");
-      });
+      otherBtn.disabled = true;
+      otherBtn.title = "WalletConnect and other wallet flows are coming soon.";
+      otherBtn.classList.add("is-coming-soon");
 
     this.walletActionsEl.append(leatherBtn, xverseBtn, otherBtn);
   }

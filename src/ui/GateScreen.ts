@@ -19,6 +19,7 @@ export class GateScreen {
   readonly el: HTMLElement;
   private statusEl: HTMLElement;
   private inputEl: HTMLInputElement;
+  private buttonEl: HTMLButtonElement;
   private onUnlocked: () => void;
 
   constructor(onUnlocked: () => void) {
@@ -31,55 +32,52 @@ export class GateScreen {
     shell.className = "gate-shell";
     this.el.appendChild(shell);
 
-    const copy = document.createElement("section");
-    copy.className = "gate-copy";
-    shell.appendChild(copy);
+    const imagePanel = document.createElement("div");
+    imagePanel.className = "gate-image-panel";
+    shell.appendChild(imagePanel);
 
-    const copyInner = document.createElement("div");
-    copyInner.className = "gate-copy-inner";
-    copy.appendChild(copyInner);
+    const imageCard = document.createElement("div");
+    imageCard.className = "gate-image-card";
+    imagePanel.appendChild(imageCard);
 
-    const eyebrow = document.createElement("div");
-    eyebrow.className = "gate-eyebrow";
-    eyebrow.textContent = "Invite Access";
-    copyInner.appendChild(eyebrow);
+    const imageUrl = getGateImageUrl();
+    if (imageUrl) {
+      const image = document.createElement("img");
+      image.src = imageUrl;
+      image.alt = "Stackshub gate artwork";
+      imageCard.appendChild(image);
+    } else {
+      const placeholder = document.createElement("div");
+      placeholder.className = "gate-image-placeholder";
+      placeholder.innerHTML = `
+        <div class="gate-image-placeholder-copy">
+          <h2>Stackshub</h2>
+          <p>${DEFAULT_PLACEHOLDER_COPY}</p>
+        </div>
+      `;
+      imageCard.appendChild(placeholder);
+    }
+
+    const loginPanel = document.createElement("div");
+    loginPanel.className = "gate-login-panel";
+    shell.appendChild(loginPanel);
+
+    const loginContent = document.createElement("div");
+    loginContent.className = "gate-login-content";
+    loginPanel.appendChild(loginContent);
 
     const title = document.createElement("h1");
-    title.innerHTML = `Enter <span>Stackshub</span>`;
-    copyInner.appendChild(title);
+    title.textContent = "Enter";
+    loginContent.appendChild(title);
 
-    const lede = document.createElement("p");
-    lede.className = "gate-lede";
-    lede.textContent =
-      "This hosted build is gated for live evaluation sessions. Enter the invite code to access the auth lobby and world entry flow.";
-    copyInner.appendChild(lede);
-
-    const notes = document.createElement("div");
-    notes.className = "gate-notes";
-    notes.innerHTML = `
-      <div>Hosted access is intentionally controlled during the judging window.</div>
-      <div>After unlock, you will continue into the Stackshub sign-in and wallet screen.</div>
-      <div>If you need a code, request one directly from the project owner.</div>
-    `;
-    copyInner.appendChild(notes);
-
-    const card = document.createElement("div");
-    card.className = "gate-card";
-    copyInner.appendChild(card);
-
-    const label = document.createElement("div");
-    label.className = "gate-card-label";
-    label.textContent = "Invite code";
-    card.appendChild(label);
-
-    const hint = document.createElement("div");
-    hint.className = "gate-card-hint";
-    hint.textContent = `Use the access code provided for a live review session. Access stays active for ${Math.round(getGateSessionDurationMs() / 60000)} minutes.`;
-    card.appendChild(hint);
+    const subtitle = document.createElement("p");
+    subtitle.className = "gate-subtitle";
+    subtitle.textContent = `Invite-only hosted access. A live session stays open for ${Math.round(getGateSessionDurationMs() / 60000)} minutes.`;
+    loginContent.appendChild(subtitle);
 
     const form = document.createElement("div");
     form.className = "gate-form";
-    card.appendChild(form);
+    loginContent.appendChild(form);
 
     this.inputEl = document.createElement("input");
     this.inputEl.className = "gate-input";
@@ -88,69 +86,20 @@ export class GateScreen {
     this.inputEl.autocomplete = "off";
     form.appendChild(this.inputEl);
 
-    const actions = document.createElement("div");
-    actions.className = "gate-actions";
-    form.appendChild(actions);
-
-    const enterBtn = document.createElement("button");
-    enterBtn.className = "gate-btn primary";
-    enterBtn.textContent = "Unlock access";
-    enterBtn.addEventListener("click", () => this.tryUnlock());
-    actions.appendChild(enterBtn);
-
-    const clearBtn = document.createElement("button");
-    clearBtn.className = "gate-btn secondary";
-    clearBtn.textContent = "Clear";
-    clearBtn.addEventListener("click", () => {
-      this.inputEl.value = "";
-      this.showStatus("");
-      this.inputEl.focus();
-    });
-    actions.appendChild(clearBtn);
+    this.buttonEl = document.createElement("button");
+    this.buttonEl.className = "gate-button";
+    this.buttonEl.textContent = "Enter with Invite Code";
+    this.buttonEl.addEventListener("click", () => this.tryUnlock());
+    form.appendChild(this.buttonEl);
 
     this.statusEl = document.createElement("div");
     this.statusEl.className = "gate-status";
     form.appendChild(this.statusEl);
 
-    const footnote = document.createElement("div");
-    footnote.className = "gate-footnote";
-    footnote.textContent =
-      "This invite screen is a hosted access checkpoint. It is not a substitute for server-side access control.";
-    card.appendChild(footnote);
-
-    const visual = document.createElement("section");
-    visual.className = "gate-visual";
-    shell.appendChild(visual);
-
-    const frame = document.createElement("div");
-    frame.className = "gate-visual-frame";
-    visual.appendChild(frame);
-
-    const imageUrl = getGateImageUrl();
-    if (imageUrl) {
-      frame.classList.add("has-image");
-      const image = document.createElement("img");
-      image.className = "gate-visual-image";
-      image.src = imageUrl;
-      image.alt = "Stackshub gate artwork";
-      frame.appendChild(image);
-    }
-
-    const overlay = document.createElement("div");
-    overlay.className = "gate-visual-overlay";
-    frame.appendChild(overlay);
-
-    const placeholder = document.createElement("div");
-    placeholder.className = "gate-placeholder";
-    placeholder.innerHTML = `
-      <div class="gate-placeholder-badge">Live review checkpoint</div>
-      <div class="gate-placeholder-copy">
-        <h2>Dungeons & Agents</h2>
-        <p>${DEFAULT_PLACEHOLDER_COPY}</p>
-      </div>
-      <div class="gate-grid" aria-hidden="true"></div>
-    `;
-    frame.appendChild(placeholder);
+    const helper = document.createElement("p");
+    helper.className = "gate-helper";
+    helper.textContent = "Request an invite code if you need access to the hosted evaluation build.";
+    loginContent.appendChild(helper);
 
     this.inputEl.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -178,6 +127,7 @@ export class GateScreen {
       return;
     }
 
+    this.buttonEl.disabled = true;
     markGateUnlocked();
     stripInviteCodeFromUrl();
     this.showStatus("Access granted. Opening Stackshub...", false, true);

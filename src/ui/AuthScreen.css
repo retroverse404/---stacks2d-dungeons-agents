@@ -71,20 +71,50 @@
   margin: 0 auto;
 }
 
-/* Brand lockup */
-.auth-screen h1 {
+.auth-brand {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 14px;
+  align-items: start;
+  justify-content: center;
+  width: fit-content;
+  margin: 0 auto 10px;
+}
+
+.auth-brand-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  opacity: 0.98;
+  margin-top: 8px;
+}
+
+.auth-brand-wordmark {
+  display: grid;
+  grid-template-rows: auto auto;
+  justify-items: start;
+  align-items: start;
+  width: fit-content;
+}
+
+.auth-brand-stacks {
   font-size: clamp(2.8rem, 5vw, 4.4rem);
   font-weight: 800;
   color: var(--text-primary);
-  margin: 0 0 12px;
-  letter-spacing: -0.05em;
-  line-height: 0.9;
-  text-align: center;
-  max-width: 100%;
+  letter-spacing: -0.06em;
+  line-height: 0.88;
 }
 
-.auth-screen h1 span {
-  color: var(--accent);
+.auth-brand-hub {
+  margin-top: -2px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  width: 100%;
+  padding-left: 0.16em;
 }
 
 .auth-screen .auth-subtitle {
@@ -100,13 +130,16 @@
 
 .auth-support-line {
   color: rgba(255, 255, 255, 0.68);
-  font-size: 0.92rem;
-  line-height: 1.5;
+  font-size: 0.76rem;
+  line-height: 1.42;
   text-align: center;
-  max-width: 31rem;
-  margin-bottom: 24px;
+  max-width: 29rem;
+  margin-bottom: 22px;
   padding: 0 8px;
   text-wrap: balance;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.015em;
+  opacity: 0.9;
 }
 
 /* Card */
@@ -342,6 +375,25 @@
   border-color: rgba(152, 190, 255, 0.18);
 }
 
+.auth-wallet-icon-btn.is-coming-soon {
+  position: relative;
+}
+
+.auth-wallet-icon-btn.is-coming-soon::after {
+  content: "Soon";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .auth-wallet-connecting {
   display: inline-flex;
   align-items: center;
@@ -448,6 +500,25 @@
 
   .auth-screen h1 {
     font-size: 2.5rem;
+  }
+
+  .auth-brand {
+    column-gap: 12px;
+  }
+
+  .auth-brand-icon {
+    width: 28px;
+    height: 28px;
+    margin-top: 6px;
+  }
+
+  .auth-brand-stacks {
+    font-size: 2.5rem;
+  }
+
+  .auth-brand-hub {
+    font-size: 0.84rem;
+    letter-spacing: 0.24em;
   }
 
   .auth-screen .auth-subtitle {

@@ -13,6 +13,16 @@
 **Hackathon:** DoraHacks Stacks Build Battle — submission deadline 2026-03-20
 **Repo:** `git@github.com:retroverse404/---stacks2d-dungeons-agents.git`
 
+## Current Operating Mode
+
+Submission mode is the priority until a stable hosted version is captured.
+
+- Primary goal: keep one working hosted foundation live on `https://stackshub.space` for the DoraHacks submission
+- Immediate deliverable: stable hosted demo + screen recording + submission-safe proof trail
+- Local work remains the build lab, not the release target
+- Do not divert into Turnkey or broader post-hackathon architecture work until the hosted submission foundation is verified and recorded
+- When in doubt, optimize for the shortest path to a stable hosted demo rather than local completeness
+
 ---
 
 ## Live Deployments
@@ -77,6 +87,7 @@
 
 ## Immediate Priorities (2026-03-20)
 
+- [ ] Keep `stackshub.space` as the canonical submission target and verify frontend + Convex + Render are aligned there
 - [ ] Capture guide.btc premium txid on live app
 - [ ] Capture market.btc premium txid on live app
 - [ ] Capture Mel premium txid on live app
@@ -127,6 +138,7 @@
 
 - This file is the single entry point for all Codex sessions — always read this first
 - The submission deadline is today (2026-03-20) — demo video and txids are the critical blockers
+- The current objective is a stable hosted submission foundation first; local polish and Turnkey work are explicitly later-session tasks
 - `premium-access-v2` is the only contract fully wired into gameplay — all others are deployed but not integrated
 - The x402 → Clarity proof loop is the core demo claim — everything else is direction
 - Turnkey adds the missing "wallet" pillar to the pitch: worlds ✅ + wallets (coming) + transactions ✅

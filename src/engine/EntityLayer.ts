@@ -1144,7 +1144,7 @@ export class EntityLayer {
       case "Mel":
         return "I’ve been curating signals all day. Press E and I’ll show you the good ones.";
       case "Toma":
-        return "Pull up a chair. Press E if you want the tavern chatter.";
+        return "Still finding Nakamoto? Pull up a chair. Press E if you want the tavern chatter.";
       default:
         return npc.dialogue[0]?.text?.trim() || "Press E to talk.";
     }

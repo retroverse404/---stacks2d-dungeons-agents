@@ -1165,10 +1165,10 @@ export const ensureDemoNpc = mutation({
     }
 
     const serviceTransitionsJson = JSON.stringify({
-      idle: ["teaching", "guiding", "offering-premium"],
-      teaching: ["idle", "guiding", "offering-premium"],
-      guiding: ["idle", "teaching", "offering-premium"],
-      "offering-premium": ["idle", "awaiting-payment"],
+      idle: ["teaching", "guiding", "offering-premium", "delivering-premium"],
+      teaching: ["idle", "guiding", "offering-premium", "delivering-premium"],
+      guiding: ["idle", "teaching", "offering-premium", "delivering-premium"],
+      "offering-premium": ["idle", "awaiting-payment", "delivering-premium"],
       "awaiting-payment": ["idle", "delivering-premium"],
       "delivering-premium": ["idle"],
     });

@@ -2,10 +2,10 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 
 const DEFAULT_TRANSITIONS = {
-  idle: ["teaching", "guiding", "offering-premium"],
-  teaching: ["idle", "guiding", "offering-premium"],
-  guiding: ["idle", "teaching", "offering-premium"],
-  "offering-premium": ["idle", "awaiting-payment"],
+  idle: ["teaching", "guiding", "offering-premium", "delivering-premium"],
+  teaching: ["idle", "guiding", "offering-premium", "delivering-premium"],
+  guiding: ["idle", "teaching", "offering-premium", "delivering-premium"],
+  "offering-premium": ["idle", "awaiting-payment", "delivering-premium"],
   "awaiting-payment": ["idle", "delivering-premium"],
   "delivering-premium": ["idle"],
 };
@@ -14,6 +14,24 @@ function normalizeTransitions(
   transitions: Record<string, string[]> | undefined,
 ) {
   return JSON.stringify(transitions ?? DEFAULT_TRANSITIONS);
+}
+
+function resolveTransitions(
+  transitions: Record<string, string[]> | undefined,
+): Record<string, string[]> {
+  const resolved: Record<string, string[]> = {};
+  const states = new Set([
+    ...Object.keys(DEFAULT_TRANSITIONS),
+    ...Object.keys(transitions ?? {}),
+  ]);
+
+  for (const state of states) {
+    const defaults = DEFAULT_TRANSITIONS[state as keyof typeof DEFAULT_TRANSITIONS] ?? [];
+    const stored = transitions?.[state] ?? [];
+    resolved[state] = Array.from(new Set([...defaults, ...stored]));
+  }
+
+  return resolved;
 }
 
 export const get = query({
@@ -130,7 +148,9 @@ export const transition = mutation({
       throw new Error(`Agent state not found for ${agentId}`);
     }
 
-    const transitions = JSON.parse(existing.transitionsJson ?? "{}") as Record<string, string[]>;
+    const transitions = resolveTransitions(
+      JSON.parse(existing.transitionsJson ?? "{}") as Record<string, string[]>,
+    );
     const allowed = transitions[existing.state] ?? [];
     if (existing.state === nextState) {
       await ctx.db.patch(existing._id, {
