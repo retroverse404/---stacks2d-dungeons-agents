@@ -13,7 +13,8 @@ import { api } from "../../convex/_generated/api";
 const JWT_KEY = "__convexAuthJWT";
 const REFRESH_KEY = "__convexAuthRefreshToken";
 const VERIFIER_KEY = "__convexAuthOAuthVerifier";
-const GITHUB_AUTH_ENABLED = ((import.meta as any).env.VITE_ENABLE_GITHUB_AUTH as string | undefined) === "true";
+const githubAuthFlag = (import.meta as any).env.VITE_ENABLE_GITHUB_AUTH as string | undefined;
+const GITHUB_AUTH_ENABLED = githubAuthFlag !== "false";
 
 export class AuthManager {
   private client: ConvexClient;

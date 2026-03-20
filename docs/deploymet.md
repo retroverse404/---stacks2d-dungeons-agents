@@ -86,6 +86,9 @@ Set in Vercel UI (or CLI), per environment:
 Optional based on your auth UX:
 
 - `VITE_APP_ENV` (e.g. `preview`, `production`) for diagnostics/UI
+- `VITE_ENABLE_GITHUB_AUTH`
+  - defaults to enabled in hosted builds
+  - set to `false` only if you explicitly want to hide the GitHub sign-in button
 
 ## Convex backend
 
