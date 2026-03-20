@@ -67,9 +67,9 @@
 | premium-access-v2 | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.premium-access-v2 | ✅ Live — called on every x402 payment |
 | world-lobby | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-lobby | Deployed, not yet wired |
 | world-objects | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects | Deployed, not yet wired |
-| wax-cylinder-nft | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft | Deployed, mint pending |
-| cassette-nft | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft | Deployed, mint pending |
-| floppy-disk-nft | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft | Deployed, mint pending |
+| wax-cylinder-nft-v2 | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft-v2 | Deployed, mint pending |
+| cassette-nft-v2 | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft-v2 | Deployed, mint pending |
+| floppy-disk-nft-v2 | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft-v2 | Deployed, mint pending |
 | qtc-token | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.qtc-token | Deployed, not yet integrated |
 | sft-items | ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.sft-items | Deployed, not yet integrated |
 
@@ -130,7 +130,7 @@
 - `premium-access-v2` is the only contract fully wired into gameplay — all others are deployed but not integrated
 - The x402 → Clarity proof loop is the core demo claim — everything else is direction
 - Turnkey adds the missing "wallet" pillar to the pitch: worlds ✅ + wallets (coming) + transactions ✅
-- NFT artifacts are post-hackathon but the contracts are deployed — show Hiro explorer links in the video as proof
+- NFT artifacts are post-hackathon but the current `-v2` contracts are deployed — show Hiro explorer links in the video as proof
 - User is a creative (video/audio/visual) — the demo video is their strongest asset, prioritize getting them to that step
 - Toma's "pay it forward" is the cultural framing of the agent economy — preserve this in all UX copy
 - All session notes include ## Claude Insights with timestamps so future sessions have full context

@@ -47,11 +47,11 @@ The current demo focuses on:
   - room and access state on Stacks testnet
 - `world-objects`
   - object registration, activity, and access state on Stacks testnet
-- `floppy-disk-nft`
+- `floppy-disk-nft-v2`
   - SIP-009 media artifact
-- `cassette-nft`
+- `cassette-nft-v2`
   - SIP-009 media artifact
-- `wax-cylinder-nft`
+- `wax-cylinder-nft-v2`
   - SIP-009 flagship media artifact
 - `qtc-token`
   - SIP-010 fungible token for the future in-world economy layer
@@ -72,18 +72,18 @@ The current demo focuses on:
   - Records object registration, active state, and object access on Stacks testnet.
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects`
   - https://explorer.hiro.so/txid/37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f?chain=testnet
-- `floppy-disk-nft` contract:
-  - SIP-009 media artifact on Stacks testnet.
-  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft`
-  - https://explorer.hiro.so/txid/0xd479d3b00cee6ffb422a5a2008c6df7b40b4dcc7973b06e40a861019d1067ff4?chain=testnet
-- `cassette-nft` contract:
-  - SIP-009 media artifact on Stacks testnet.
-  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft`
-  - https://explorer.hiro.so/txid/0x9f676a6529744b1b207cf2a615739fdb098067664913944b50e5e6c4929f04ac?chain=testnet
-- `wax-cylinder-nft` contract:
-  - SIP-009 flagship artifact on Stacks testnet.
-  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft`
-  - https://explorer.hiro.so/txid/0x144b4cca0fce72e98ad6bd7619ee2de146bca085f7cf1398ec85421b0c060296?chain=testnet
+- `floppy-disk-nft-v2` contract:
+  - Current SIP-009 media artifact deployment on Stacks testnet.
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft-v2`
+  - https://explorer.hiro.so/txid/0xcca2941d4894f25b2ac1f68a0aa20b078237587d4406a751e48a167c1ecb6956?chain=testnet
+- `cassette-nft-v2` contract:
+  - Current SIP-009 media artifact deployment on Stacks testnet.
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft-v2`
+  - https://explorer.hiro.so/txid/0x589305b8353192df54c642a6f408a53c488367a4057114661e0b90d6f5db403d?chain=testnet
+- `wax-cylinder-nft-v2` contract:
+  - Current SIP-009 flagship artifact deployment on Stacks testnet.
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft-v2`
+  - https://explorer.hiro.so/txid/0x25a39a2005a51765c6a540436fd8b6efadc2191360347ad432af90364217ce74?chain=testnet
 - `qtc-token` contract:
   - SIP-010 fungible token deployed on Stacks testnet.
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.qtc-token`
@@ -100,7 +100,7 @@ The current demo focuses on:
 - `premium-access-v2`: a deployed Clarity 4 contract records paid premium-access proof on testnet.
 - `world-lobby`: a deployed Clarity contract records room creation, room access, and room entry state on testnet.
 - `world-objects`: a deployed Clarity contract records object registration, object access, and object activity state on testnet.
-- `floppy-disk-nft`, `cassette-nft`, `wax-cylinder-nft`: deployed SIP-009 media artifacts on testnet.
+- `floppy-disk-nft-v2`, `cassette-nft-v2`, `wax-cylinder-nft-v2`: deployed SIP-009 media artifacts on testnet.
 - `qtc-token`: deployed SIP-010 fungible token on testnet, not yet integrated into gameplay.
 - `sft-items`: deployed semi-fungible item contract on testnet, not yet integrated into gameplay.
 - `Zero Authority`: backend-ingested ecosystem data is cached in Convex and rendered in-world.
@@ -233,15 +233,15 @@ Verified on Stacks testnet:
 - `world-objects` is deployed on testnet
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects`
   - `37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f`
-- `floppy-disk-nft` is deployed on testnet
-  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft`
-  - `d479d3b00cee6ffb422a5a2008c6df7b40b4dcc7973b06e40a861019d1067ff4`
-- `cassette-nft` is deployed on testnet
-  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft`
-  - `9f676a6529744b1b207cf2a615739fdb098067664913944b50e5e6c4929f04ac`
-- `wax-cylinder-nft` is deployed on testnet
-  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft`
-  - `144b4cca0fce72e98ad6bd7619ee2de146bca085f7cf1398ec85421b0c060296`
+- `floppy-disk-nft-v2` is deployed on testnet
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft-v2`
+  - `cca2941d4894f25b2ac1f68a0aa20b078237587d4406a751e48a167c1ecb6956`
+- `cassette-nft-v2` is deployed on testnet
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft-v2`
+  - `589305b8353192df54c642a6f408a53c488367a4057114661e0b90d6f5db403d`
+- `wax-cylinder-nft-v2` is deployed on testnet
+  - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft-v2`
+  - `25a39a2005a51765c6a540436fd8b6efadc2191360347ad432af90364217ce74`
 - `qtc-token` is deployed on testnet
   - `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.qtc-token`
   - `2a0ccf9cb5c22fcd16a0d8ff897c5fadf231cd41bf77558d49bd8f7d8ca032de`
@@ -480,13 +480,13 @@ Next evolution:
 - verified x402 premium payment paths for `guide.btc` and `market.btc`
 - eight deployed testnet contracts:
   - `premium-access-v2`
-  - `world-lobby.clar`
-  - `world-objects.clar`
-  - `floppy-disk-nft.clar`
-  - `cassette-nft.clar`
-  - `wax-cylinder-nft.clar`
-  - `qtc-token.clar`
-  - `sft-items.clar`
+  - `world-lobby`
+  - `world-objects`
+  - `floppy-disk-nft-v2`
+  - `cassette-nft-v2`
+  - `wax-cylinder-nft-v2`
+  - `qtc-token`
+  - `sft-items`
 - AIBTC-aligned agent registry and account-binding scaffolding in Convex
 
 Still not live in gameplay:

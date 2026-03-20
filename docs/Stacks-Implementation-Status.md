@@ -1,6 +1,6 @@
 # Stacks Implementation Status
 
-Updated: 2026-03-17
+Updated: 2026-03-20
 
 ## Scope
 
@@ -50,9 +50,9 @@ It is an engineering status document, not a submission or positioning note.
 | `premium-access-v2` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.premium-access-v2` | [`0x96afaf46c0e1ed8f86aceb0b0687fa6bdd284f9ea1366cd5437dc25901e969c3`](https://explorer.hiro.so/txid/0x96afaf46c0e1ed8f86aceb0b0687fa6bdd284f9ea1366cd5437dc25901e969c3?chain=testnet) |
 | `world-lobby` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-lobby` | [`0xe411bff9d554b55f12a19c30fa4d278525f8c197f4deac3391cb4362b0e6d84f`](https://explorer.hiro.so/txid/e411bff9d554b55f12a19c30fa4d278525f8c197f4deac3391cb4362b0e6d84f?chain=testnet) |
 | `world-objects` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.world-objects` | [`0x37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f`](https://explorer.hiro.so/txid/37518e87cdb28578cdc9c8afcd5ba42245fca3c45d2adda4b4dfbd0bea5d385f?chain=testnet) |
-| `floppy-disk-nft` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft` | [`0xd479d3b00cee6ffb422a5a2008c6df7b40b4dcc7973b06e40a861019d1067ff4`](https://explorer.hiro.so/txid/0xd479d3b00cee6ffb422a5a2008c6df7b40b4dcc7973b06e40a861019d1067ff4?chain=testnet) |
-| `cassette-nft` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft` | [`0x9f676a6529744b1b207cf2a615739fdb098067664913944b50e5e6c4929f04ac`](https://explorer.hiro.so/txid/0x9f676a6529744b1b207cf2a615739fdb098067664913944b50e5e6c4929f04ac?chain=testnet) |
-| `wax-cylinder-nft` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft` | [`0x144b4cca0fce72e98ad6bd7619ee2de146bca085f7cf1398ec85421b0c060296`](https://explorer.hiro.so/txid/0x144b4cca0fce72e98ad6bd7619ee2de146bca085f7cf1398ec85421b0c060296?chain=testnet) |
+| `floppy-disk-nft-v2` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft-v2` | [`0xcca2941d4894f25b2ac1f68a0aa20b078237587d4406a751e48a167c1ecb6956`](https://explorer.hiro.so/txid/0xcca2941d4894f25b2ac1f68a0aa20b078237587d4406a751e48a167c1ecb6956?chain=testnet) |
+| `cassette-nft-v2` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft-v2` | [`0x589305b8353192df54c642a6f408a53c488367a4057114661e0b90d6f5db403d`](https://explorer.hiro.so/txid/0x589305b8353192df54c642a6f408a53c488367a4057114661e0b90d6f5db403d?chain=testnet) |
+| `wax-cylinder-nft-v2` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft-v2` | [`0x25a39a2005a51765c6a540436fd8b6efadc2191360347ad432af90364217ce74`](https://explorer.hiro.so/txid/0x25a39a2005a51765c6a540436fd8b6efadc2191360347ad432af90364217ce74?chain=testnet) |
 | `qtc-token` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.qtc-token` | [`0x2a0ccf9cb5c22fcd16a0d8ff897c5fadf231cd41bf77558d49bd8f7d8ca032de`](https://explorer.hiro.so/txid/0x2a0ccf9cb5c22fcd16a0d8ff897c5fadf231cd41bf77558d49bd8f7d8ca032de?chain=testnet) |
 | `sft-items` | `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.sft-items` | [`0xae0b7cb5b01fbd84acb5db5cf4501d9a49dcc06af4b73a1f664d583ca4952944`](https://explorer.hiro.so/txid/0xae0b7cb5b01fbd84acb5db5cf4501d9a49dcc06af4b73a1f664d583ca4952944?chain=testnet) |
 
@@ -73,6 +73,7 @@ It is an engineering status document, not a submission or positioning note.
 - Txid returned in every premium response — directly verifiable on Hiro explorer
 - World Feed shows `premium-access-granted` events after each payment
 - Clarity contracts (`premium-access-v2`, `world-lobby`, `world-objects`) deployed and callable from this repo
+- `floppy-disk-nft-v2`, `cassette-nft-v2`, and `wax-cylinder-nft-v2` pass live read-only checks for owner principal, `get-last-token-id`, `get-owner(u1)`, and `get-token-uri(u1)`
 - `qtc-token` and `sft-items` are now deployed on Stacks testnet from this repo
 - In-world objects (bookshelf, phonograph) serve as physical payment terminals
 
@@ -82,7 +83,7 @@ It is an engineering status document, not a submission or positioning note.
 - `services/x402-api` remains the payment boundary
 - Clarity contracts are used for durable proof and access state, not for high-frequency world simulation
 - Ambient NPC simulation is deterministic and cheap; LLM calls are bounded to premium surfaces
-- SIP-009 artifact NFTs are deployed on testnet, but mint/claim flows and wallet post-conditions are not wired yet
+- SIP-009 artifact NFTs are deployed on testnet as the current `-v2` contracts, but mint/claim flows and wallet post-conditions are not wired yet
 - `qtc-token` and `sft-items` are deployed, but no live GameFi economy should be claimed until minting, seeding, balances, and gameplay loops are visible
 
 ## Required Before Demo

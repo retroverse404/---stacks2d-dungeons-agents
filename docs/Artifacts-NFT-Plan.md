@@ -9,16 +9,16 @@
 
 | Artifact | Contract | Agent | Role |
 |---|---|---|---|
-| Wax Cylinder | `wax-cylinder-nft` | Mel | Flagship — music memory, editorial lore |
-| Cassette | `cassette-nft` | Mel | Mid-tier media artifact |
-| Floppy Disk | `floppy-disk-nft` | quests.btc | Digital relic, lore carrier |
+| Wax Cylinder | `wax-cylinder-nft-v2` | Mel | Flagship — music memory, editorial lore |
+| Cassette | `cassette-nft-v2` | Mel | Mid-tier media artifact |
+| Floppy Disk | `floppy-disk-nft-v2` | quests.btc | Digital relic, lore carrier |
 
 All three are SIP-009 NFTs deployed on Stacks testnet. Contracts support `mint`, `transfer`, `set-token-uri`.
 
 **Contract addresses:**
-- `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft`
-- `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft`
-- `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft`
+- `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.wax-cylinder-nft-v2`
+- `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.cassette-nft-v2`
+- `ST2JDN3QED16X524SE8GWQSTP2MW6D2005AEEGJ9S.floppy-disk-nft-v2`
 
 ---
 
@@ -101,7 +101,7 @@ Scriptable. Claude can write the upload script.
 ```
 🎵 Wax Cylinder Memory — 1 STX
 Artifact: SIP-009 NFT (mint coming soon)
-Contract: ST2JDN...wax-cylinder-nft [View on Hiro ↗]
+Contract: ST2JDN...wax-cylinder-nft-v2 [View on Hiro ↗]
 ```
 
 **3. Demo video narration:**
@@ -123,7 +123,7 @@ Contract: ST2JDN...wax-cylinder-nft [View on Hiro ↗]
 1. Create wax cylinder artwork (Midjourney/Canva brief below)
 2. Build 3D scene in WorldLabs → export GLB
 3. Upload to Arweave (image + GLB + metadata JSON)
-4. Wire `wax-cylinder-nft.mint` to Mel's x402 success callback in `services/x402-api/src/server.ts`
+4. Wire `wax-cylinder-nft-v2.mint` to Mel's x402 success callback in `services/x402-api/src/server.ts`
 5. Add cassette + floppy disk artwork + metadata
 6. Wire remaining mints to their respective agent interactions
 
