@@ -760,6 +760,19 @@ possible inside the same world model
 - **Build** — edit the map, collision, and placement data
 - **Sprites** — define and preview custom sprite animations
 
+## Built On
+
+This project forks [61cygni/tinyrealms](https://github.com/61cygni/tinyrealms) as its 2D spatial engine — map rendering, tile collision, NPC movement, and multiplayer presence are built on that foundation.
+
+Everything in the Stacks layer is original work built on top of it:
+- x402 payment rail and premium content gates
+- Clarity contracts (premium-access-v2, world-lobby, world-objects, SIP-009 artifacts, SIP-010 token, SFT items)
+- AI agent runtime with wallet-backed identities and autonomous think loops
+- Convex backend with agent registry, semantic world model, and ecosystem integrations
+- AIBTC, Zero Authority, and Tenero adapters
+
+TinyRealms is the engine. Stackshub / Dungeons & Agents is what we built on top of it.
+
 ## Attribution
 
-This repository builds on the original 2D world foundation while taking the product in a different direction around semantic worlds, AI agent simulation, and Stacks/Bitcoin-native economic primitives.
+Built on [61cygni/tinyrealms](https://github.com/61cygni/tinyrealms) — a 2D multiplayer world engine. The Stacks integration, AI agent layer, x402 payment rail, Clarity contracts, and semantic world model are original contributions built for this project.
