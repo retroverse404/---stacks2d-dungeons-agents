@@ -182,7 +182,7 @@ async function broadcastViaHiro(
   const response = await fetch(url, {
     method: "POST",
     headers,
-    body: rawTransaction,
+    body: rawTransaction as unknown as BodyInit,
   });
 
   const text = await response.text();

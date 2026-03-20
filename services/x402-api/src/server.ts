@@ -280,7 +280,11 @@ if (!guideServerAddress) {
     }),
     async (req, res) => {
       try {
-        const premiumAccess = await finalizePremiumAccess(req, GUIDE_PREMIUM_ACCESS, STXtoMicroSTX(guidePremiumPrice));
+        const premiumAccess = await finalizePremiumAccess(
+          req,
+          GUIDE_PREMIUM_ACCESS,
+          Number(STXtoMicroSTX(guidePremiumPrice)),
+        );
         res.json({
           title: "guide.btc classified briefing",
           classification: "premium",
@@ -310,7 +314,11 @@ if (!guideServerAddress) {
     }),
     async (req, res) => {
       try {
-        const premiumAccess = await finalizePremiumAccess(req, BOOKSHELF_PREMIUM_ACCESS, STXtoMicroSTX(guidePremiumPrice));
+        const premiumAccess = await finalizePremiumAccess(
+          req,
+          BOOKSHELF_PREMIUM_ACCESS,
+          Number(STXtoMicroSTX(guidePremiumPrice)),
+        );
         res.json({
           title: "Cozy Cabin bookshelf brief",
           classification: "premium",
@@ -363,7 +371,7 @@ if (!guideServerAddress) {
         const premiumAccess = await finalizePremiumAccess(
           req,
           DUAL_STACKING_VIDEO_PREMIUM_ACCESS,
-          STXtoMicroSTX(guidePremiumPrice),
+          Number(STXtoMicroSTX(guidePremiumPrice)),
         );
         res.json({
           title: "Dual Stacking on Bitcoin",
@@ -417,7 +425,11 @@ if (!melServerAddress) {
     }),
     async (req, res) => {
       try {
-        const premiumAccess = await finalizePremiumAccess(req, MEL_PREMIUM_ACCESS, STXtoMicroSTX(melPremiumPrice));
+        const premiumAccess = await finalizePremiumAccess(
+          req,
+          MEL_PREMIUM_ACCESS,
+          Number(STXtoMicroSTX(melPremiumPrice)),
+        );
         res.json({
           title: "Mel curator signal",
           classification: "premium",
@@ -449,7 +461,11 @@ if (!melServerAddress) {
     }),
     async (req, res) => {
       try {
-        const premiumAccess = await finalizePremiumAccess(req, WAX_CYLINDER_PREMIUM_ACCESS, STXtoMicroSTX(melPremiumPrice));
+        const premiumAccess = await finalizePremiumAccess(
+          req,
+          WAX_CYLINDER_PREMIUM_ACCESS,
+          Number(STXtoMicroSTX(melPremiumPrice)),
+        );
         res.json({
           title: "Wax cylinder memory fragment",
           classification: "premium",
@@ -540,7 +556,11 @@ if (!marketServerAddress) {
       }
 
       try {
-        const premiumAccess = await finalizePremiumAccess(req, MARKET_PREMIUM_ACCESS, STXtoMicroSTX(marketPremiumPrice));
+        const premiumAccess = await finalizePremiumAccess(
+          req,
+          MARKET_PREMIUM_ACCESS,
+          Number(STXtoMicroSTX(marketPremiumPrice)),
+        );
         res.json({
           tokenX,
           tokenY,
